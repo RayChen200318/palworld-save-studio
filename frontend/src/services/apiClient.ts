@@ -1,12 +1,16 @@
 import type {
   ActiveSkill,
   CommitResult,
+  ItemCatalog,
+  ItemContainerName,
+  ItemMutationResult,
   PalCatalogItem,
   PalDetail,
   PalSummary,
   PassiveSkill,
   PathContext,
   PlayerDetail,
+  PlayerInventory,
   PlayerSummary,
   SaveConfig,
   SaveSession,
@@ -208,6 +212,65 @@ export class ApiClient {
 
   unlockAllTechnology(playerId: string): Promise<{ Player: PlayerDetail; DirtyRevision: number }> {
     return this.request(`/player/${encodeURIComponent(playerId)}/technology/unlock-all`, { method: 'POST' })
+  }
+
+  getItemCatalog(): Promise<ItemCatalog> {
+    return this.request('/item/catalog')
+  }
+
+  getPlayerInventory(playerId: string): Promise<PlayerInventory> {
+    return this.request(`/item/player/${encodeURIComponent(playerId)}`)
+  }
+
+  createItem(
+    playerId: string,
+    payload: {
+      StaticId: string
+      Container: ItemContainerName
+      Quantity?: number
+      SlotIndex?: number
+      EggCharacterId?: string
+    },
+  ): Promise<ItemMutationResult> {
+    return this.request(`/item/player/${encodeURIComponent(playerId)}`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+  }
+
+  patchItem(
+    playerId: string,
+    container: ItemContainerName,
+    slotIndex: number,
+    changes: Record<string, number | string>,
+  ): Promise<ItemMutationResult> {
+    return this.request(`/item/player/${encodeURIComponent(playerId)}/${container}/${slotIndex}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ changes }),
+    })
+  }
+
+  deleteItem(
+    playerId: string,
+    container: ItemContainerName,
+    slotIndex: number,
+    confirmDangerous = false,
+  ): Promise<ItemMutationResult> {
+    return this.request(`/item/player/${encodeURIComponent(playerId)}/${container}/${slotIndex}`, {
+      method: 'DELETE',
+      body: JSON.stringify({ ConfirmDangerous: confirmDangerous }),
+    })
+  }
+
+  moveItem(
+    playerId: string,
+    source: { Container: ItemContainerName; SlotIndex: number },
+    target: { Container: ItemContainerName; SlotIndex: number },
+  ): Promise<ItemMutationResult> {
+    return this.request(`/item/player/${encodeURIComponent(playerId)}/move`, {
+      method: 'POST',
+      body: JSON.stringify({ Source: source, Target: target }),
+    })
   }
 
   private async request<T>(path: string, init: RequestInit = {}, authenticated = true): Promise<T> {

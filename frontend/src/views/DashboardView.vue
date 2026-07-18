@@ -20,6 +20,7 @@ const actions = computed(() => [
   { icon: 'plus', title: copy.value.dashboard.addPal, copy: copy.value.dashboard.addPalHint, to: '/pals?add=1', tone: 'cyan' },
   { icon: 'users', title: copy.value.dashboard.editPlayers, copy: copy.value.dashboard.editPlayersHint, to: '/players', tone: 'gold' },
   { icon: 'book', title: copy.value.dashboard.technology, copy: copy.value.dashboard.technologyHint, to: '/technology', tone: 'cyan' },
+  { icon: 'box', title: copy.value.dashboard.items, copy: copy.value.dashboard.itemsHint, to: '/items', tone: 'cyan' },
   { icon: 'paw', title: copy.value.dashboard.browsePals, copy: copy.value.dashboard.browsePalsHint, to: '/pals', tone: 'gold' },
 ])
 

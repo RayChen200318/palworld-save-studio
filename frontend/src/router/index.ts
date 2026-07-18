@@ -5,6 +5,7 @@ import PalsView from '@/views/PalsView.vue'
 import PalDetailView from '@/views/PalDetailView.vue'
 import PlayersView from '@/views/PlayersView.vue'
 import TechnologyView from '@/views/TechnologyView.vue'
+import ItemsView from '@/views/ItemsView.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -15,6 +16,7 @@ const router = createRouter({
     { path: '/pals/:id', name: 'pal-detail', component: PalDetailView },
     { path: '/players', name: 'players', component: PlayersView },
     { path: '/technology', name: 'technology', component: TechnologyView },
+    { path: '/items', name: 'items', component: ItemsView },
     { path: '/:pathMatch(.*)*', redirect: '/' },
   ],
 })

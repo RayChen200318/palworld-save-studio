@@ -17,15 +17,22 @@ Windows 10/11 x64 and supports Steam and dedicated-server saves.
 - Edit player nickname, level, technology points, Boss technology points, and
   viewing-cage access.
 - Browse technology by level and toggle normal or Boss technology.
+- The `0.2.0-beta.1` preview branch adds player inventory, key-item, food-pouch,
+  weapon, equipment, temporary-drop, durability, ammunition, rarity, and egg
+  management. Preview builds are supplied only through pull-request CI artifacts.
 - Keep all changes in one in-memory draft and save them to the currently opened
   world in one operation.
 
 ## Supported scope
 
-The first release supports the Windows GUI, Palworld 1.0 data, Steam saves, and
-dedicated-server saves. It does not include Xbox/Game Pass, out-of-range values,
-raw JSON editing, Save As, bulk field editing, multi-level undo, installers,
-automatic updates, telemetry, a light theme, or other desktop platforms.
+The published first release supports the Windows GUI, Palworld 1.0 data, Steam
+saves, and dedicated-server saves. Item management on the preview branch is
+currently validated with a Steam save only; it does not claim dedicated-server
+item validation. Item management excludes base storage, world containers,
+cross-player transfers, virtual progress records, and out-of-range values. The
+application also does not include Xbox/Game Pass, raw JSON editing, Save As,
+bulk field editing, multi-level undo, installers, automatic updates, telemetry,
+a light theme, or other desktop platforms.
 
 ## Development
 

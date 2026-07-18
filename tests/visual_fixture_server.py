@@ -91,7 +91,7 @@ def session():
 
 
 @app.route("/api/save/fetch_config")
-def config(): return ok({"I18n": "zh-CN", "I18nList": {"zh-CN": "简体中文", "en": "English"}, "Path": session()["Path"], "HasPassword": False, "VERSION": "0.1.0-beta.1", "IsOfficialBuild": False, "BackupEnabled": True})
+def config(): return ok({"I18n": "zh-CN", "I18nList": {"zh-CN": "简体中文", "en": "English"}, "Path": session()["Path"], "HasPassword": False, "VERSION": "0.2.0-beta.1", "IsOfficialBuild": False, "BackupEnabled": True})
 
 
 @app.route("/api/auth/login", methods=["POST"])
@@ -129,7 +129,7 @@ def settings():
 
 @app.route("/api/save/update")
 def update_status():
-    return ok({"CurrentVersion": "0.1.0-beta.1", "LatestVersion": None, "UpdateAvailable": False, "ReleaseUrl": None})
+    return ok({"CurrentVersion": "0.2.0-beta.1", "LatestVersion": None, "UpdateAvailable": False, "ReleaseUrl": None})
 
 
 @app.route("/api/save/i18n", methods=["PATCH"])

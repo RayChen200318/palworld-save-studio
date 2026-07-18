@@ -40,6 +40,7 @@ describe('translations', () => {
         pal: messages['zh-CN'].pal,
         players: messages['zh-CN'].players,
         technology: messages['zh-CN'].technology,
+        items: messages['zh-CN'].items,
       },
       en: {
         common: messages.en.common,
@@ -49,6 +50,7 @@ describe('translations', () => {
         pal: messages.en.pal,
         players: messages.en.players,
         technology: messages.en.technology,
+        items: messages.en.items,
       },
     })
     expect(publicCopy).not.toMatch(/回退|安全写回|备份卖点|reversible|safe write-back|backup/i)

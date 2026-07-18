@@ -11,6 +11,7 @@ import { apiClient } from '@/services/apiClient'
 import { useCollectionStore } from '@/stores/collection'
 import { useDraftStore } from '@/stores/draft'
 import { useSessionStore } from '@/stores/session'
+import { useItemsStore } from '@/stores/items'
 
 defineProps<{ eyebrow: string; title: string }>()
 
@@ -19,6 +20,7 @@ const router = useRouter()
 const session = useSessionStore()
 const draft = useDraftStore()
 const collection = useCollectionStore()
+const items = useItemsStore()
 const copy = computed(() => messages[session.locale])
 const settingsOpen = ref(false)
 const disableBackupOpen = ref(false)
@@ -45,6 +47,7 @@ function requestChangeSave() {
 async function discardAndChange() {
   await session.discardDraft()
   collection.clear()
+  items.clear()
   changeOpen.value = false
   router.push('/')
 }
@@ -54,6 +57,7 @@ async function commit() {
   await session.commitDraft()
   saveOpen.value = false
   await Promise.all([collection.loadPals(true), collection.loadPlayers(true)])
+  if (items.selectedPlayerId) await items.loadInventory(items.selectedPlayerId, true)
 }
 
 async function toggleBackup() {
@@ -90,6 +94,7 @@ async function checkUpdate() {
         <RouterLink to="/pals" class="nav-item" :class="{ active: active === 'pals' || active === 'pal' }"><AppIcon name="paw" /><span>{{ copy.nav.pals }}</span></RouterLink>
         <RouterLink to="/players" class="nav-item" :class="{ active: active === 'players' }"><AppIcon name="users" /><span>{{ copy.nav.players }}</span></RouterLink>
         <RouterLink to="/technology" class="nav-item" :class="{ active: active === 'technology' }"><AppIcon name="book" /><span>{{ copy.nav.technology }}</span></RouterLink>
+        <RouterLink to="/items" class="nav-item" :class="{ active: active === 'items' }"><AppIcon name="box" /><span>{{ copy.nav.items }}</span></RouterLink>
       </nav>
 
       <div class="world-card">

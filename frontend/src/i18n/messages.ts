@@ -1,13 +1,13 @@
 const zhCN = {
   common: {
-    product: 'Palworld Save Studio', version: '0.1.0-beta.1', beta: '功能开发版', unofficial: '非官方粉丝工具',
+    product: 'Palworld Save Studio', version: '0.2.0-beta.1', beta: '功能开发版', unofficial: '非官方粉丝工具',
     save: '保存全部修改', saving: '正在保存', cancel: '取消', confirm: '确认', close: '关闭', back: '返回',
     loading: '正在载入', retry: '重试', search: '搜索', all: '全部', none: '无', add: '新增', edit: '编辑',
     delete: '删除', duplicate: '复制', level: '等级', owner: '持有者', location: '位置', status: '状态',
     noResults: '没有符合条件的结果', pending: '正在提交修改', unsaved: '有未保存修改', saved: '修改已写入并重新核验',
   },
   nav: {
-    overview: '工作区', dashboard: 'Dashboard', players: '玩家', pals: '帕鲁', technology: '科技',
+    overview: '工作区', dashboard: 'Dashboard', players: '玩家', pals: '帕鲁', technology: '科技', items: '物品',
     settings: '设置与关于', loadedWorld: '当前世界', changeSave: '更换存档', noWorld: '尚未打开存档',
   },
   start: {
@@ -26,6 +26,7 @@ const zhCN = {
     actionsTitle: '开始编辑', addPal: '新增帕鲁', addPalHint: '选择持有玩家与物种，加入该玩家的帕鲁终端',
     editPlayers: '编辑玩家', editPlayersHint: '修改昵称、等级、科技点与观赏笼',
     technology: '科技管理', technologyHint: '按等级浏览并切换普通或 Boss 科技',
+    items: '物品管理', itemsHint: '管理背包、关键物品、食物袋与装备槽',
     browsePals: '浏览全部对象', browsePalsHint: '搜索、筛选与排序帕鲁及人类 NPC',
     recent: '对象预览', viewAll: '查看全部', path: '当前存档位置', issueTitle: '异常对象',
     issueCopy: '容器外、昏厥或异常状态对象仍可在全局列表中定位和处理。', inspect: '打开筛选结果',
@@ -65,6 +66,22 @@ const zhCN = {
     player: '玩家', query: '搜索科技名称或内部 ID', normal: '普通科技', boss: 'Boss 科技', unlocked: '已解锁', locked: '未解锁',
     unlockAll: '全部解锁', unlockAllTitle: '确认解锁全部科技？', unlockAllCopy: '全部科技将加入当前内存草稿。', levelGroup: '等级',
   },
+  items: {
+    eyebrow: '物品管理', title: '玩家物品', intro: '管理当前玩家的物品容器；修改进入统一草稿。', player: '当前玩家',
+    add: '新增物品', addTitle: '新增正式物品', addHere: '添加到此槽位', chooseItem: '从左侧目录选择一个物品。',
+    search: '搜索中英文名称、内部 ID、类别或稀有度', allCategories: '全部类别', allRarities: '全部稀有度',
+    containersLabel: '玩家物品容器', containers: { common: '普通背包', essential: '关键物品', food: '食物袋', weapon: '武器槽', armor: '装备槽', drop: '临时掉落' },
+    unlocked: '格可用', unlockedSlots: '个已解锁槽位', slot: '槽位', empty: '空槽', locked: '未解锁', noDrops: '当前没有临时掉落物品',
+    dragHint: '拖放可移动、交换或合并；跨容器移动可在右侧选择目标。', dropHint: '临时掉落槽只允许取回普通背包或删除。',
+    selectItem: '选择一个物品', selectItemHint: '点击槽位查看数量、稀有度与动态属性。', emptySlot: '空槽位', emptySlotHint: '选择正式 Palworld 1.0 物品添加到当前槽位。',
+    quantity: '数量', rarity: '稀有度', durability: '耐久度', ammo: '弹药', eggSpecies: '蛋内帕鲁种类', readOnlyPassives: '武器动态词条（只读）',
+    moveTo: '移动或交换到', chooseSlot: '选择目标槽位', move: '执行移动', retrieve: '取回普通背包', target: '目标',
+    delete: '删除物品', deleteTitle: '删除此物品？', deleteCopy: '删除会进入当前内存草稿，保存全部修改后才写入存档。',
+    deleteDangerTitle: '删除关键或扩容物品？', deleteDangerCopy: '此操作可能缩减可用槽位。系统会先整理受影响物品；空间不足时整项操作会被拒绝。', confirmDelete: '确认删除',
+    noEmptySlot: '当前容器没有兼容的空槽位。', noCommonSpace: '普通背包没有可用空槽，无法取回。', unknown: '未知',
+    slotTypes: { head: '头部', body: '身体', accessory: '饰品', shield: '护盾', glider: '滑翔伞', 'sphere-module': '帕鲁球模块' },
+    rarities: { 0: '普通', 1: '罕见', 2: '稀有', 3: '史诗', 4: '传说', 5: '特殊' },
+  },
   settings: {
     title: '设置与关于', language: '界面语言', update: '更新检查', updateHint: '仅读取新仓库最新 Release 信息，不自动下载。',
     check: '检查更新', checking: '正在检查', current: '当前已是最新版本', available: '发现版本', noRelease: '尚无公开版本', updateFailed: '检查失败', backup: '持久备份', backupHint: '保存前在 Palworld-Save-Studio-Backup 中保留一份存档副本。',
@@ -83,14 +100,14 @@ const zhCN = {
 
 const en = {
   common: {
-    product: 'Palworld Save Studio', version: '0.1.0-beta.1', beta: 'Development build', unofficial: 'Unofficial fan tool',
+    product: 'Palworld Save Studio', version: '0.2.0-beta.1', beta: 'Development build', unofficial: 'Unofficial fan tool',
     save: 'Save all changes', saving: 'Saving', cancel: 'Cancel', confirm: 'Confirm', close: 'Close', back: 'Back',
     loading: 'Loading', retry: 'Retry', search: 'Search', all: 'All', none: 'None', add: 'Add', edit: 'Edit',
     delete: 'Delete', duplicate: 'Duplicate', level: 'Level', owner: 'Owner', location: 'Location', status: 'Status',
     noResults: 'No matching results', pending: 'Submitting changes', unsaved: 'Unsaved changes', saved: 'Changes written and revalidated',
   },
   nav: {
-    overview: 'Workspace', dashboard: 'Dashboard', players: 'Players', pals: 'Pals', technology: 'Technology',
+    overview: 'Workspace', dashboard: 'Dashboard', players: 'Players', pals: 'Pals', technology: 'Technology', items: 'Items',
     settings: 'Settings & About', loadedWorld: 'Current world', changeSave: 'Change save', noWorld: 'No save opened',
   },
   start: {
@@ -109,6 +126,7 @@ const en = {
     actionsTitle: 'Start editing', addPal: 'Add Pal', addPalHint: "Choose an owner and species, then add it to that player's Palbox",
     editPlayers: 'Edit players', editPlayersHint: 'Change names, levels, technology points, and viewing cages',
     technology: 'Manage technology', technologyHint: 'Browse by level and toggle normal or Boss technology',
+    items: 'Manage items', itemsHint: 'Manage inventory, key items, food pouch, and equipment slots',
     browsePals: 'Browse every object', browsePalsHint: 'Search, filter, and sort Pals and human NPCs',
     recent: 'Object preview', viewAll: 'View all', path: 'Current save location', issueTitle: 'Anomalous objects',
     issueCopy: 'Objects outside containers, fainted objects, and conditions remain available in the global list.', inspect: 'Open filtered results',
@@ -147,6 +165,22 @@ const en = {
     eyebrow: 'Technology management', title: 'Technology', intro: 'Browse by unlock level and edit normal or Boss technology for the selected player.',
     player: 'Player', query: 'Search technology name or internal ID', normal: 'Normal technology', boss: 'Boss technology', unlocked: 'Unlocked', locked: 'Locked',
     unlockAll: 'Unlock all', unlockAllTitle: 'Unlock every technology?', unlockAllCopy: 'Every technology will be added to the current in-memory draft.', levelGroup: 'Level',
+  },
+  items: {
+    eyebrow: 'Item management', title: 'Player items', intro: "Manage the current player's item containers; edits enter the unified draft.", player: 'Current player',
+    add: 'Add item', addTitle: 'Add a formal item', addHere: 'Add to this slot', chooseItem: 'Choose an item from the catalog.',
+    search: 'Search English or Chinese name, internal ID, category, or rarity', allCategories: 'All categories', allRarities: 'All rarities',
+    containersLabel: 'Player item containers', containers: { common: 'Inventory', essential: 'Key items', food: 'Food pouch', weapon: 'Weapon slots', armor: 'Equipment', drop: 'Temporary drops' },
+    unlocked: 'slots available', unlockedSlots: 'unlocked slots', slot: 'Slot', empty: 'Empty', locked: 'Locked', noDrops: 'No temporary dropped items',
+    dragHint: 'Drag to move, swap, or merge. Use the detail panel for cross-container moves.', dropHint: 'Temporary drops can only return to the inventory or be deleted.',
+    selectItem: 'Select an item', selectItemHint: 'Click a slot to inspect quantity, rarity, and dynamic properties.', emptySlot: 'Empty slot', emptySlotHint: 'Add a formal Palworld 1.0 item to this slot.',
+    quantity: 'Quantity', rarity: 'Rarity', durability: 'Durability', ammo: 'Ammunition', eggSpecies: 'Pal inside egg', readOnlyPassives: 'Dynamic weapon traits (read-only)',
+    moveTo: 'Move or swap to', chooseSlot: 'Choose target slot', move: 'Move item', retrieve: 'Return to inventory', target: 'Target',
+    delete: 'Delete item', deleteTitle: 'Delete this item?', deleteCopy: 'Deletion enters the in-memory draft and reaches disk only after saving all changes.',
+    deleteDangerTitle: 'Delete a key or capacity item?', deleteDangerCopy: 'This may reduce available slots. Affected items are reorganized first; the operation is rejected atomically if space is insufficient.', confirmDelete: 'Delete item',
+    noEmptySlot: 'No compatible empty slot exists in this container.', noCommonSpace: 'The inventory has no free slot for retrieval.', unknown: 'Unknown',
+    slotTypes: { head: 'Head', body: 'Body', accessory: 'Accessory', shield: 'Shield', glider: 'Glider', 'sphere-module': 'Sphere module' },
+    rarities: { 0: 'Common', 1: 'Uncommon', 2: 'Rare', 3: 'Epic', 4: 'Legendary', 5: 'Special' },
   },
   settings: {
     title: 'Settings & About', language: 'Interface language', update: 'Update check', updateHint: 'Reads the latest Release metadata from the new repository and never downloads automatically.',
