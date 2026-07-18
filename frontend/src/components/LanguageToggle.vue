@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { usePrototypeStore } from '@/stores/prototype'
+import { useSessionStore } from '@/stores/session'
 
-const store = usePrototypeStore()
+const store = useSessionStore()
 const label = computed(() => store.locale === 'zh-CN' ? 'EN' : '中')
 </script>
 

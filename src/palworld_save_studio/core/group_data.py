@@ -30,12 +30,13 @@ class PalGroup:
         return "\t".join(lines)
 
     def add_pal(self, instanceId: UUID | str) -> bool:
+        instance_key = str(instanceId)
         if self.has_pal(instanceId):
             LOGGER.warning("Pal ID already exists")
             return False
 
         new_handle = PalObjects.individual_character_handle_id(instanceId)
-        self.instance_map[str(instanceId)] = new_handle
+        self.instance_map[instance_key] = new_handle
         match self.individual_character_handle_ids:
             case None:
                 self._group_param["individual_character_handle_ids"] = [new_handle]
@@ -47,10 +48,11 @@ class PalGroup:
         return True
 
     def del_pal(self, instanceId: UUID | str):
-        if not self.has_pal(instanceId):
+        instance_key = str(instanceId)
+        if not self.has_pal(instance_key):
             LOGGER.warning(f"Pal {instanceId} not exist in group {self.guild_name}")
             return
-        handle = self.instance_map.pop(instanceId)
+        handle = self.instance_map.pop(instance_key)
         match self.individual_character_handle_ids:
             case None:
                 pass
@@ -58,10 +60,10 @@ class PalGroup:
                 self.individual_character_handle_ids.remove(handle)
 
     def has_pal(self, instanceId: UUID | str) -> bool:
-        return instanceId in self.instance_map
+        return str(instanceId) in self.instance_map
 
     def has_player(self, playerUId: UUID | str) -> bool:
-        return playerUId in self.player_map
+        return str(playerUId) in self.player_map
 
     @property
     def group_id(self) -> Optional[UUID]:
@@ -117,7 +119,7 @@ class GroupData:
             LOGGER.info(f"Guild Found: {group_entity}")
 
     def get_group(self, group_id: UUID | str) -> Optional[PalGroup]:
-        return self.group_map.get(group_id)
+        return self.group_map.get(str(group_id))
 
     def get_groups(self) -> list[PalGroup]:
         return list(self.group_map.values())

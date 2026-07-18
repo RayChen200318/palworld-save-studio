@@ -11,7 +11,6 @@ from palworld_save_studio.utils.util import clamp, type_guard
 
 class PlayerEntity:
     MAX_LEVEL = 80
-    MAX_INVALID_LEVEL = 100
 
     def __init__(
         self,
@@ -245,7 +244,7 @@ class PlayerEntity:
     @LOGGER.change_logger("Level")
     @type_guard
     def Level(self, value: int) -> None:
-        value = clamp(1, PlayerEntity.MAX_INVALID_LEVEL, value)
+        value = clamp(1, PlayerEntity.MAX_LEVEL, value)
         if self.Level is None:
             self._player_param["Level"] = PalObjects.ByteProperty(1)
 

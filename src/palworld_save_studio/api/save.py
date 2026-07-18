@@ -10,9 +10,10 @@ from palworld_save_studio.config import (
     Config,
     version_info,
     is_gh_build,
-    get_new_version,
+    get_release_status,
 )
 from palworld_save_studio.core import SaveManager
+from palworld_save_studio.core.save_transaction import SaveTransactionError
 from palworld_save_studio.utils import LOGGER, DataProvider
 from palworld_save_studio.utils.util import get_path_context, reply
 
@@ -30,6 +31,7 @@ def fetch_config():
             "HasPassword": Config.password != None,
             "VERSION": version_info(),
             "IsOfficialBuild": is_gh_build(),
+            "BackupEnabled": Config.backup_enabled,
         },
     )
 
@@ -38,39 +40,72 @@ def fetch_config():
 # @LOGGER.api_logger
 @jwt_required()
 def load():
-    path = request.json.get("ReadPath", None)
+    path = (request.get_json(silent=True) or {}).get("ReadPath", None)
     path = path or Config.path
-    try:
-        if path and SaveManager().open(path):
-            Config.path = path
-            Config.save_to_file()
-            return reply(0)
-    except Exception as e:
-        stack_trace = traceback.format_exc()
-        LOGGER.error(f"Error Loading Save {stack_trace}")
+    manager = SaveManager()
+    if manager.has_draft:
         return reply(
             1,
-            msg=f"Error occored during loading, please make sure both the editor and your game save is up to date! Check debug console for further details.",
-        )
-
-    LOGGER.warning(f"Failed to load, check path: {path}")
-    return reply(1, None, f"Failed to load, check path: {path}")
-
-
-@save_blueprint.route("/save", methods=["POST"])
-@jwt_required()
-def save():
-    path = request.json.get("WritePath", None)
+            msg="Discard the current in-memory draft before loading another save.",
+        ), 409
+    state = manager._capture_runtime_state()
     try:
-        if SaveManager().save(path):
-            return reply(0)
-        return reply(1, msg=f"Path not available? {path}")
-    except Exception as e:
+        if path and manager.open(path):
+            Config.path = str(Path(path).resolve())
+            Config.save_to_file()
+            return reply(0, manager.session_summary())
+    except Exception:
         stack_trace = traceback.format_exc()
-        LOGGER.error(f"Error in patch_paldata {stack_trace}")
+        LOGGER.error(f"Error Loading Save {stack_trace}")
+        manager._restore_runtime_state(state)
         return reply(
-            1, msg=f"Error occored during saving, check debug console. {stack_trace}"
-        )
+            1,
+            msg="The save could not be parsed. Confirm that it is a Palworld 1.0 save and that the game is closed.",
+        ), 400
+
+    manager._restore_runtime_state(state)
+    LOGGER.warning(f"Failed to load, check path: {path}")
+    return reply(1, None, f"No Palworld save was found at: {path}"), 400
+
+
+@save_blueprint.route("/session", methods=["GET"])
+@jwt_required()
+def get_session():
+    return reply(0, SaveManager().session_summary())
+
+
+@save_blueprint.route("/discard", methods=["POST"])
+@jwt_required()
+def discard():
+    if SaveManager().discard():
+        return reply(0, SaveManager().session_summary())
+    return reply(1, msg="The in-memory draft could not be discarded."), 500
+
+
+@save_blueprint.route("/commit", methods=["POST"])
+@jwt_required()
+def commit():
+    try:
+        result = SaveManager().commit()
+        return reply(0, {"Commit": result, "Session": SaveManager().session_summary()})
+    except SaveTransactionError as exc:
+        LOGGER.error(f"Save commit failed: {traceback.format_exc()}")
+        return reply(1, msg=str(exc)), 409
+    except Exception:
+        stack_trace = traceback.format_exc()
+        LOGGER.error(f"Save commit failed: {stack_trace}")
+        return reply(1, msg="The save could not be committed."), 500
+
+
+@save_blueprint.route("/settings", methods=["PATCH"])
+@jwt_required()
+def update_settings():
+    payload = request.get_json(silent=True) or {}
+    enabled = payload.get("BackupEnabled")
+    if not isinstance(enabled, bool):
+        return reply(1, msg="BackupEnabled must be a boolean."), 400
+    Config.set_config("backup_enabled", enabled)
+    return reply(0, SaveManager().session_summary())
 
 
 @save_blueprint.route("/passive_skills", methods=["GET"])
@@ -128,7 +163,7 @@ def get_active_skills():
 def update_i18n():
     i18n_code = request.json.get("I18n", None)
     if DataProvider.is_valid_i18n(i18n_code):
-        Config.i18n = i18n_code
+        Config.set_config("i18n", i18n_code)
         return reply(0)
     LOGGER.warning(
         f"I18n code {i18n_code} not available. Select from {DataProvider.get_i18n_options()}"
@@ -144,12 +179,7 @@ def get_pal_data():
     pal_arr = []
     for pal in pals_raw:
         iname = pal["InternalName"]
-        if (
-            "BOSS_" in iname
-            and DataProvider.boss_has_base_variant(iname)
-            or "Boss_" in iname
-            and DataProvider.boss_has_base_variant(iname)
-        ):
+        if not DataProvider.is_editable_species(iname):
             continue
         data = {
             "InternalName": iname,
@@ -159,6 +189,7 @@ def get_pal_data():
             "I18n": DataProvider.get_pal_i18n(iname) or iname,
             "SortingKey": DataProvider.get_pal_sorting_key(iname),
             "IsHuman": DataProvider.is_pal_human(iname) or False,
+            "IconAccessKey": iname if not DataProvider.is_pal_human(iname) or DataProvider.has_human_icon(iname) else "Human",
         }
         pal_dict[iname] = data
         pal_arr.append(data)
@@ -173,10 +204,13 @@ def get_tech_data():
     for tech in tech_data:
         lv = DataProvider.get_tech_lv(tech)
         lv_arr = tech_lv_dict.get(lv, [])
+        localized = DataProvider.get_tech_i18n(tech)
         data = {
             "InternalName": tech,
-            "I18n": DataProvider.get_tech_i18n(tech),
+            "I18n": localized.get("Name", tech) if isinstance(localized, dict) else (localized or tech),
             "BossTechnology": DataProvider.is_boss_tech(tech),
+            "Level": lv,
+            "IconAccessKey": tech,
         }
         lv_arr.append(data)
         tech_lv_dict[lv] = lv_arr
@@ -211,7 +245,7 @@ def get_path():
         return reply(1, msg=f"Error, cannot open path {current_path}.")
 
 
-@save_blueprint.route("path", methods=["POST"])
+@save_blueprint.route("/path", methods=["POST"])
 @jwt_required()
 def update_path():
     path = Path(request.json.get("path")).resolve()
@@ -229,7 +263,7 @@ def update_path():
         return reply(1, msg=f"Error, cannot open path {path}.")
 
 
-@save_blueprint.route("path", methods=["PATCH"])
+@save_blueprint.route("/path", methods=["PATCH"])
 @jwt_required()
 def path_back():
     path = Path(Config.path).parent.resolve()
@@ -244,21 +278,11 @@ def path_back():
         return reply(1, msg=f"Error, cannot open path {path}.")
 
 
-@save_blueprint.route("update", methods=["GET"])
+@save_blueprint.route("/update", methods=["GET"])
 @jwt_required()
 def has_update():
     try:
-        version = asyncio.run(get_new_version())
-    except RuntimeError:
-        loop = asyncio.get_event_loop()
-        version = loop.run_until_complete(get_new_version())
-    if version is not None:
-        return reply(
-            0,
-            {
-                "version": version[0],
-                "download_gh": version[1],
-            },
-            msg="New version available.",
-        )
-    return reply(1, msg="Failed to get new version.")
+        return reply(0, asyncio.run(get_release_status()))
+    except Exception:
+        LOGGER.error(f"Release check failed: {traceback.format_exc()}")
+        return reply(1, msg="The latest Release could not be checked."), 503

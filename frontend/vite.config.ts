@@ -10,6 +10,10 @@ export default defineConfig({
   server: {
     port: 4173,
     strictPort: true,
+    proxy: {
+      '/api': 'http://127.0.0.1:58080',
+      '/image': 'http://127.0.0.1:58080',
+    },
   },
   preview: {
     port: 4173,

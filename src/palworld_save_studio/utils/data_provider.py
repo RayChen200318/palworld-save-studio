@@ -107,6 +107,21 @@ class DataProvider:
         """
         return key in PAL_DATA
 
+    @staticmethod
+    def is_editable_species(key: str) -> bool:
+        if key not in PAL_DATA:
+            return False
+        if PAL_DATA[key].get("Invalid"):
+            return False
+        if (key.startswith("BOSS_") or key.startswith("Boss_")) and DataProvider.boss_has_base_variant(key):
+            return False
+        return True
+
+    @none_guard(data_source=PAL_DATA)
+    @staticmethod
+    def get_pal_elements(key: str) -> list[str]:
+        return list(PAL_DATA[key].get("Elements", []))
+
     @none_guard(data_source=PAL_DATA, subkey="I18n")
     @staticmethod
     def get_pal_i18n(key: str) -> Optional[str]:

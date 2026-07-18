@@ -2,9 +2,8 @@ import json
 import os
 from pathlib import Path
 import sys
-from typing import Optional
 import aiohttp
-import platform
+import secrets
 
 def get_program_path():
     # If running in AppImage, use the real file path
@@ -56,51 +55,33 @@ def version_info() -> str:
 def is_gh_build() -> bool:
     return GIT_HASH != "0000000"
 
-async def get_new_version() -> Optional[tuple[str, str]]:
-    if not is_gh_build():
-        return None
+async def get_release_status() -> dict:
     releases_url = "https://api.github.com/repos/RayChen200318/palworld-save-studio/releases/latest"
-    async def fetch_latest_release():
-        async with aiohttp.ClientSession() as session:
-            async with session.get(releases_url) as resp:
-                if resp.status != 200:
-                    return None
-                return await resp.json()
+    timeout = aiohttp.ClientTimeout(total=8)
+    headers = {"Accept": "application/vnd.github+json"}
+    async with aiohttp.ClientSession(timeout=timeout, headers=headers) as session:
+        async with session.get(releases_url) as response:
+            if response.status == 404:
+                return {
+                    "CurrentVersion": VERSION,
+                    "LatestVersion": None,
+                    "UpdateAvailable": False,
+                    "ReleaseUrl": None,
+                }
+            response.raise_for_status()
+            release = await response.json()
 
-    def get_platform_asset_name():
-        sys_platform = platform.system()
-        if sys_platform == "Windows":
-            return "Windows"
-        elif sys_platform == "Darwin":
-            return "macOS"
-        elif sys_platform == "Linux":
-            return "Linux"
-        return None
-
-    def parse_version(tag):
-        return tag
-
-    async def check_update() -> Optional[tuple[str, str]]:
-        release = await fetch_latest_release()
-        if not release or "tag_name" not in release:
-            return None
-        latest_version = parse_version(release["tag_name"])
-        current_version = VERSION
-        if latest_version.lstrip("v") == current_version.lstrip("v"):
-            return None
-        platform_name = get_platform_asset_name()
-        if not platform_name:
-            return None
-        for asset in release.get("assets", []):
-            if platform_name in asset["name"]:
-                return latest_version, asset["browser_download_url"]
-        return None
-
-    try:
-        return await check_update()
-    except Exception as e:
-        print(f"Error checking for updates: {e}")
-        return None
+    latest = release.get("tag_name")
+    if not isinstance(latest, str) or not latest:
+        raise RuntimeError("The latest Release has no tag name.")
+    current_normalized = VERSION.removeprefix("v")
+    latest_normalized = latest.removeprefix("v")
+    return {
+        "CurrentVersion": VERSION,
+        "LatestVersion": latest,
+        "UpdateAvailable": latest_normalized != current_normalized,
+        "ReleaseUrl": release.get("html_url"),
+    }
 
 
 class Config:
@@ -111,8 +92,9 @@ class Config:
     path: str = None
     password: str = None
     nocli: bool = False
+    backup_enabled: bool = True
     _password_hash: str = None
-    JWT_SECRET_KEY: str = "X2Nvbm5sb3N0"
+    JWT_SECRET_KEY: str = secrets.token_urlsafe(48)
 
     @classmethod
     def load_from_file(cls, file_path: str=CONFIG_PATH):
@@ -124,6 +106,8 @@ class Config:
                 for key, value in data.items():
                     if hasattr(cls, key):
                         setattr(cls, key, value)
+                if not isinstance(cls.JWT_SECRET_KEY, str) or len(cls.JWT_SECRET_KEY) < 32:
+                    cls.JWT_SECRET_KEY = secrets.token_urlsafe(48)
 
     @classmethod
     def set_configs(cls, attrs: dict):
@@ -161,5 +145,6 @@ class Config:
             'port': Config.port,
             'path': Config.path,
             'password': Config.password,
+            'backup_enabled': Config.backup_enabled,
             'JWT_SECRET_KEY': Config.JWT_SECRET_KEY
         }

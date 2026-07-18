@@ -1,9 +1,8 @@
 import copy
-from datetime import datetime
 from pathlib import Path
-import shutil
+import tempfile
 import traceback
-from typing import Optional
+from typing import Any, Optional
 import uuid
 
 from palworld_save_tools.gvas import GvasFile
@@ -21,6 +20,11 @@ from palworld_save_studio.core.pal_entity import PalEntity
 from palworld_save_studio.utils import LOGGER, alphanumeric_key
 from palworld_save_studio.core.group_data import GroupData
 from palworld_save_studio.config import Config
+from palworld_save_studio.core.save_transaction import (
+    BACKUP_FOLDER_NAME,
+    SaveTransactionError,
+    replace_staged_files,
+)
 
 
 def skip_decode(reader: FArchiveReader, type_name: str, size: int, path: str):
@@ -151,8 +155,22 @@ class SaveManager:
     def __init__(self):
         if not hasattr(self, "initialized"):
             self.initialized = True
+            self._file_path = None
+            self._raw_gvas = None
+            self._save_type = None
+            self.gvas_file = None
+            self._entities_list = None
+            self.player_mapping = {}
+            self.baseworker_mapping = {}
+            self._dangling_pals = {}
+            self.container_data = None
+            self.group_data = None
+            self.camp_data = None
+            self._loaded = False
+            self._dirty_revision = 0
+            self._last_commit: dict[str, Any] | None = None
 
-    def open(self, file_path: str) -> Optional[GvasFile]:
+    def open(self, file_path: str, *, reset_session: bool = True) -> Optional[GvasFile]:
         self._file_path = Path(file_path).resolve()
 
         level_sav_path = self._file_path / "Level.sav"
@@ -221,61 +239,197 @@ class SaveManager:
             self._load_entities()
 
             LOGGER.info("Done")
+        self._loaded = True
+        if reset_session:
+            self._dirty_revision = 0
+            self._last_commit = None
         return self.gvas_file
 
-    def save(self, file_path: str) -> bool:
-        if self.gvas_file is None:
-            LOGGER.error("No gvas_file stored in save manager, aborting")
+    def save(self, file_path: str | None = None) -> bool:
+        """CLI save entry point; the GUI writes only to the loaded path."""
+        if file_path and self._file_path and Path(file_path).resolve() != self._file_path:
+            LOGGER.error("Save As is not supported by Palworld Save Studio.")
             return False
-        if self._save_type is None:
-            LOGGER.warning("_save_type is None, aborting")
-            return False
+        return bool(self.commit().get("Verified"))
 
-        output_path = Path(file_path).resolve()
+    def _serialize_to(self, output_path: Path) -> list[Path]:
+        if self.gvas_file is None or self._save_type is None:
+            raise SaveTransactionError("No loaded save is available.")
 
-        if not output_path.exists():
-            LOGGER.warning(f"Path does not exist: {output_path}")
-            if output_path.parent.exists():
-                output_path.mkdir(parents=True, exist_ok=True)
-                LOGGER.debug(f"Path {output_path} created")
-            else:
-                LOGGER.error(f"Parent path {output_path.parent} does not exist, skipping")
-                return False
-
-        file_path: Path = output_path / "Level.sav"
-
-        if output_path.exists():
-            BK_FOLDER_NAME = "Palworld-Save-Studio-Backup"
-            backup_dir = output_path / BK_FOLDER_NAME / f"{datetime.now().strftime(r'%Y-%m-%d_%H-%M-%S')}"
-            try:
-                if output_path.exists():
-                    LOGGER.info(f"Saving backup of {output_path} to {backup_dir}")
-                    shutil.copytree(self._file_path, backup_dir,
-                                    ignore=lambda dir, files: [f for f in files if not f == "Players" and not f.endswith('.sav')])
-                else:
-                    LOGGER.info(f"No existing directory to backup: {output_path}")
-            except Exception as e:
-                LOGGER.error(f"Error backing up directory: {e}")
-                return False
-
-        LOGGER.info("Saving Player Data...")
+        output_path.mkdir(parents=True, exist_ok=True)
+        relative_paths: list[Path] = []
         for player in self.player_mapping.values():
-            self.save_player_sav(player, output_path)
+            if not self.save_player_sav(player, output_path):
+                raise SaveTransactionError(f"Unable to serialize player {player.PlayerUId}.")
+            relative_paths.append(Path("Players") / f"{UUID2HexStr(player.PlayerUId)}.sav")
 
-        LOGGER.info("Saving Level.sav...")
+        level_path = output_path / "Level.sav"
         gvas_file = copy.deepcopy(self.gvas_file)
-        LOGGER.info("Compressing Main GVAS file")
         sav_data = compress_gvas_to_sav(
             gvas_file.write(MAIN_SKIP_PROPERTIES),
             self._save_type,
             debug=Config.debug,
         )
+        level_path.write_bytes(sav_data)
+        return [Path("Level.sav"), *relative_paths]
 
-        LOGGER.info(f"Saving to {file_path}")
-        with file_path.open("wb") as file:
-            file.write(sav_data)
-        LOGGER.info(f"Saved to {file_path}")
-        return True
+    def _validate_staged_files(self, staged_root: Path, paths: list[Path]) -> None:
+        for relative_path in paths:
+            raw_gvas, _ = decompress_sav_to_gvas(
+                (staged_root / relative_path).read_bytes(), debug=Config.debug
+            )
+            properties = (
+                MAIN_SKIP_PROPERTIES
+                if relative_path == Path("Level.sav")
+                else PLAYER_SKIP_PROPERTIES
+            )
+            GvasFile.read(raw_gvas, PALWORLD_TYPE_HINTS, properties)
+
+    def _capture_runtime_state(self) -> dict[str, Any]:
+        return {
+            key: getattr(self, key)
+            for key in (
+                "_file_path",
+                "_raw_gvas",
+                "_save_type",
+                "gvas_file",
+                "_entities_list",
+                "player_mapping",
+                "baseworker_mapping",
+                "_dangling_pals",
+                "container_data",
+                "group_data",
+                "camp_data",
+                "_loaded",
+                "_dirty_revision",
+                "_last_commit",
+            )
+        }
+
+    def _restore_runtime_state(self, state: dict[str, Any]) -> None:
+        for key, value in state.items():
+            setattr(self, key, value)
+
+    def _semantic_snapshot(self) -> dict[str, Any]:
+        players = []
+        for player in sorted(self.get_players(), key=lambda item: str(item.PlayerUId)):
+            players.append(
+                {
+                    "id": str(player.PlayerUId),
+                    "nickname": player.NickName or "",
+                    "level": player.Level or 1,
+                    "technology_points": player.TechnologyPoint or 0,
+                    "boss_technology_points": player.bossTechnologyPoint or 0,
+                    "technology": sorted(player.UnlockedRecipeTechnologyNames or []),
+                }
+            )
+
+        pals = []
+        for context in self.get_all_pal_contexts():
+            pal = context["pal"]
+            pals.append(
+                {
+                    "id": str(pal.InstanceId),
+                    "character_id": pal.CharacterID,
+                    "nickname": pal.NickName or "",
+                    "gender": pal.Gender.value if pal.Gender else None,
+                    "level": pal.Level or 1,
+                    "friendship": pal.FriendshipLevel or 0,
+                    "rank": pal.Rank or 1,
+                    "soul": [
+                        pal.Rank_HP or 0,
+                        pal.Rank_Attack or 0,
+                        pal.Rank_Defence or 0,
+                        pal.Rank_CraftSpeed or 0,
+                    ],
+                    "iv": [
+                        pal.Talent_HP or 0,
+                        pal.Talent_Melee or 0,
+                        pal.Talent_Shot or 0,
+                        pal.Talent_Defense or 0,
+                    ],
+                    "passives": list(pal.PassiveSkillList or []),
+                    "mastered": list(pal.MasteredWaza or []),
+                    "equipped": list(pal.EquipWaza or []),
+                    "work": dict(sorted((pal.WorkSuitabilities or {}).items())),
+                    "flags": [
+                        bool(pal.IsBOSS),
+                        bool(pal.IsRarePal),
+                        bool(pal.IsTower),
+                        bool(pal.IsAwakening),
+                    ],
+                    "health": {
+                        "hp": pal.Hp,
+                        "sanity": pal.SanityValue,
+                        "stomach": pal.FullStomach,
+                        "worker_sick": pal.WorkerSick,
+                        "hunger": pal.HungerType,
+                        "revive_timer": pal.PalReviveTimer,
+                        "physical_health": pal.PhysicalHealth,
+                    },
+                    "container": str(pal.ContainerId) if pal.ContainerId else None,
+                    "slot": pal.SlotIndex,
+                    "owner": str(pal.OwnerPlayerUId) if pal.OwnerPlayerUId else None,
+                }
+            )
+        pals.sort(key=lambda item: item["id"])
+        return {"players": players, "pals": pals}
+
+    def commit(self) -> dict[str, Any]:
+        if not self._loaded or self._file_path is None:
+            raise SaveTransactionError("No save is loaded.")
+        if not self._file_path.is_dir():
+            raise SaveTransactionError(f"Loaded path is unavailable: {self._file_path}")
+        if self._dirty_revision == 0:
+            return {
+                "Verified": True,
+                "FilesWritten": 0,
+                "BackupPath": None,
+                "Revision": 0,
+            }
+
+        intended_snapshot = self._semantic_snapshot()
+        runtime_state = self._capture_runtime_state()
+        transaction_root = Path(
+            tempfile.mkdtemp(
+                prefix=".palworld-save-studio-transaction-",
+                dir=self._file_path.parent,
+            )
+        )
+        staged_root = transaction_root / "staged"
+        try:
+            paths = self._serialize_to(staged_root)
+            self._validate_staged_files(staged_root, paths)
+
+            def verify() -> bool:
+                if not self.open(str(self._file_path), reset_session=False):
+                    return False
+                return self._semantic_snapshot() == intended_snapshot
+
+            result = replace_staged_files(
+                save_root=self._file_path,
+                staged_root=staged_root,
+                transaction_root=transaction_root,
+                relative_paths=paths,
+                backup_enabled=Config.backup_enabled,
+                verify=verify,
+            )
+        except Exception:
+            self._restore_runtime_state(runtime_state)
+            raise
+        finally:
+            import shutil
+
+            shutil.rmtree(transaction_root, ignore_errors=True)
+
+        self._dirty_revision = 0
+        self._last_commit = {
+            "Verified": result.verified,
+            "FilesWritten": result.files_written,
+            "BackupPath": result.backup_path,
+            "Revision": 0,
+        }
+        return dict(self._last_commit)
 
     def load_player_sav(self, player_uid: str | UUID) -> tuple[GvasFile, int]:
         player_path: Path = self._file_path / "Players" / f"{UUID2HexStr(player_uid)}.sav"
@@ -433,6 +587,7 @@ class SaveManager:
         return self.baseworker_mapping.get(str(guid), None)
 
     def get_pal(self, guid: UUID | str) -> Optional[PalEntity]:
+        guid = str(guid)
         if guid in self.baseworker_mapping:
             return self.baseworker_mapping[guid]
         if guid in self._dangling_pals:
@@ -442,6 +597,103 @@ class SaveManager:
                 return pal
 
         LOGGER.warning(f"Can't find pal {guid}")
+
+    def get_all_pal_contexts(self) -> list[dict[str, Any]]:
+        contexts: dict[str, dict[str, Any]] = {}
+        for player in self.get_players():
+            for pal in player._palbox.values():
+                instance_id = str(pal.InstanceId)
+                if pal.ContainerId == player.OtomoCharacterContainerId:
+                    location = "party"
+                elif pal.ContainerId == player.PalStorageContainerId:
+                    location = "palbox"
+                else:
+                    location = "outside"
+                contexts[instance_id] = {
+                    "pal": pal,
+                    "owner": player,
+                    "location": location,
+                }
+
+        for instance_id, pal in self.baseworker_mapping.items():
+            owner = self.get_player(pal.LastOwnerPlayerUId or pal.OwnerPlayerUId)
+            contexts[instance_id] = {
+                "pal": pal,
+                "owner": owner,
+                "location": "base",
+            }
+
+        for instance_id, pal in self._dangling_pals.items():
+            contexts.setdefault(
+                instance_id,
+                {
+                    "pal": pal,
+                    "owner": self.get_player(pal.LastOwnerPlayerUId or pal.OwnerPlayerUId),
+                    "location": "outside",
+                },
+            )
+        return list(contexts.values())
+
+    def get_pal_context(self, guid: UUID | str) -> Optional[dict[str, Any]]:
+        guid = str(guid)
+        for context in self.get_all_pal_contexts():
+            if str(context["pal"].InstanceId) == guid:
+                return context
+
+    def mark_dirty(self) -> int:
+        if not self._loaded:
+            raise RuntimeError("No save is loaded.")
+        self._dirty_revision += 1
+        return self._dirty_revision
+
+    @property
+    def has_draft(self) -> bool:
+        return self._dirty_revision > 0
+
+    def discard(self) -> bool:
+        if not self._loaded or self._file_path is None:
+            return False
+        state = self._capture_runtime_state()
+        try:
+            if self.open(str(self._file_path), reset_session=True):
+                return True
+        except Exception:
+            LOGGER.error(f"Failed discarding draft: {traceback.format_exc()}")
+        self._restore_runtime_state(state)
+        return False
+
+    def session_summary(self) -> dict[str, Any]:
+        contexts = self.get_all_pal_contexts() if self._loaded else []
+        human_count = sum(bool(context["pal"].IsHuman) for context in contexts)
+        pal_count = len(contexts) - human_count
+        anomaly_count = sum(
+            bool(
+                context["pal"].is_unreferenced_pal
+                or context["pal"].HasWorkerSick
+                or context["pal"].IsFaintedPal
+                or context["location"] == "outside"
+            )
+            for context in contexts
+        )
+        loaded_path = str(self._file_path) if self._file_path else Config.path
+        return {
+            "Path": loaded_path,
+            "Loaded": self._loaded,
+            "DirtyRevision": self._dirty_revision,
+            "Dirty": self._dirty_revision > 0,
+            "Statistics": {
+                "Players": len(self.player_mapping or {}),
+                "Pals": pal_count,
+                "Humans": human_count,
+                "Anomalies": anomaly_count,
+                "Objects": len(contexts),
+            },
+            "BackupEnabled": Config.backup_enabled,
+            "BackupPath": (
+                str(Path(loaded_path) / BACKUP_FOLDER_NAME) if loaded_path else None
+            ),
+            "LastCommit": self._last_commit,
+        }
 
     def get_working_pals(self) -> list[PalEntity]:
         return sorted(self.baseworker_mapping.values(), key=lambda pal: (alphanumeric_key(pal.PalDeckID), pal.Level or 1))
@@ -466,7 +718,8 @@ class SaveManager:
             raise Exception("Pal already in the target container.")
 
         old_container = self.container_data.get_container(pal_entity.ContainerId)
-        old_container.del_pal(pal_id)
+        if old_container:
+            old_container.del_pal(pal_id)
 
         if (slot_idx := pal_container.add_pal(pal_id)) == -1:
             return False
@@ -474,54 +727,84 @@ class SaveManager:
         pal_entity.SlotId = (pal_container.ID, slot_idx)
         return True
 
+    def retrieve_pal(self, pal_id: UUID | str, player_uid: UUID | str) -> bool:
+        pal_id = str(pal_id)
+        player = self.get_player(player_uid)
+        pal_entity = self.get_pal(pal_id)
+        if not player or not pal_entity:
+            return False
+        target_group = self.group_data.get_group(player.group_id)
+        if target_group is None:
+            return False
+        if not self.move_pal(pal_id, [player.PalStorageContainerId]):
+            return False
+
+        self.baseworker_mapping.pop(pal_id, None)
+        self._dangling_pals.pop(pal_id, None)
+        for other_player in self.get_players():
+            if other_player is player:
+                continue
+            other_player.pop_pal(pal_id)
+        pal_entity.OwnerPlayerUId = player.PlayerUId
+        pal_entity.group_id = player.group_id
+        for group in self.group_data.get_groups():
+            if group is not target_group and group.has_pal(pal_entity.InstanceId):
+                group.del_pal(pal_entity.InstanceId)
+        if not target_group.has_pal(pal_entity.InstanceId):
+            target_group.add_pal(pal_entity.InstanceId)
+        if not player.get_pal(pal_id, disable_warning=True):
+            player.add_pal(pal_entity)
+        pal_entity.is_unreferenced_pal = False
+        return True
+
     def delete_pal(self, guid: str | UUID) -> bool:
-        popped_pal = None
-        if guid in self.baseworker_mapping:
-            popped_pal = self.baseworker_mapping.pop(guid)
-        elif guid in self._dangling_pals:
-            popped_pal = self._dangling_pals.pop(guid)
-        else:
-            for player in self.get_players():
-                if popped_pal := player.pop_pal(guid):
-                    break
-        if not popped_pal:
+        guid = str(guid)
+        pal = self.get_pal(guid)
+        if not pal:
             LOGGER.warning(f"Can't find pal {guid}")
             return False
+
+        if pal._pal_obj not in self._entities_list:
+            LOGGER.error(f"Pal {guid} is missing from the world entity list.")
+            return False
+
         try:
-            if pal_group := self.group_data.get_group(popped_pal.group_id):
-                pal_group.del_pal(popped_pal.InstanceId)
-            if pal_container := self.container_data.get_container(popped_pal.ContainerId):
-                pal_container.del_pal(popped_pal.InstanceId)
-            self._entities_list.remove(popped_pal._pal_obj)
-        except:
+            for pal_group in self.group_data.get_groups():
+                if pal_group.has_pal(pal.InstanceId):
+                    pal_group.del_pal(pal.InstanceId)
+            if pal_container := self.container_data.get_container(pal.ContainerId):
+                pal_container.del_pal(pal.InstanceId)
+            self._entities_list.remove(pal._pal_obj)
+            self.baseworker_mapping.pop(guid, None)
+            self._dangling_pals.pop(guid, None)
+            for player in self.get_players():
+                player.pop_pal(guid)
+        except Exception:
             LOGGER.warning(f"Error Deleting PAL {guid}: {traceback.format_exc()}")
             return False
         LOGGER.info(f"DELETED PAL {guid}")
         return True
 
-    def heal_all_pals(self):
-        for pal in self.baseworker_mapping.values():
-            pal.heal_pal()
-        for pal in self._dangling_pals.values():
-            pal.heal_pal()
-        for player in self.get_players():
-            for pal in player._palbox.values():
-                pal.heal_pal()
+    def heal_all_pals(self) -> int:
+        contexts = self.get_all_pal_contexts()
+        for context in contexts:
+            context["pal"].heal_pal()
+        return len(contexts)
 
-    def add_pal(self, player_uid: str | UUID, pal_obj: dict = None) -> Optional[PalEntity]:
+    def add_pal(
+        self,
+        player_uid: str | UUID,
+        pal_obj: dict = None,
+        character_id: str | None = None,
+    ) -> Optional[PalEntity]:
         player = self.get_player(player_uid)
         if player is None:
             LOGGER.warning(f"Player {player_uid} not found")
             return None
 
-        player_container_ids = [player.OtomoCharacterContainerId, player.PalStorageContainerId]
-
-        pal_container = None
-        for id in player_container_ids:
-            if (container := self.container_data.get_container(id)) is not None:
-                if container.get_empty_slot() != -1:
-                    pal_container = container
-                    break
+        pal_container = self.container_data.get_container(player.PalStorageContainerId)
+        if pal_container is not None and pal_container.get_empty_slot() == -1:
+            pal_container = None
 
         if pal_container is None:
             LOGGER.info("No Empty Pal Slot")
@@ -530,6 +813,9 @@ class SaveManager:
         pal_instanceId = toUUID(str(uuid.uuid4()))
         group_id = player.group_id
         group = self.group_data.get_group(group_id)
+        if group is None:
+            LOGGER.error(f"Player {player_uid} has no writable guild group.")
+            return None
 
         while pal_container.has_pal(pal_instanceId) or group.has_pal(pal_instanceId):
             pal_instanceId = toUUID(str(uuid.uuid4()))
@@ -548,6 +834,8 @@ class SaveManager:
                 pal_entity = PalEntity(pal_obj)
                 pal_entity.InstanceId = pal_instanceId
                 pal_entity.SlotId = (container_id, slot_idx)
+                pal_entity.OwnerPlayerUId = player_uid
+                pal_entity.group_id = group_id
                 # I don't know why some captured pals have PlayerUId,
                 # But having non-empty ID will cause the game to hide the duped pal
                 pal_entity.PlayerUId = PalObjects.EMPTY_UUID
@@ -557,7 +845,10 @@ class SaveManager:
                 # pal_entity._pal_param.pop("EquipItemContainerId", None)
                 # remove expedition status
                 pal_entity._pal_param.pop("MapObjectConcreteInstanceIdAssignedToExpedition", None)
-                pal_entity.NickName = "!!!DUPED PAL!!!"
+                pal_entity.NickName = ""
+
+            if character_id:
+                pal_entity.CharacterID = character_id
 
             pal_entity.is_new_pal = True
 
@@ -565,6 +856,11 @@ class SaveManager:
                 raise Exception("Duplicated Pal ID, Try Again!")
             self._entities_list.append(pal_obj)
         except:
+            try:
+                pal_container.del_pal(pal_instanceId)
+                group.del_pal(pal_instanceId)
+            except Exception:
+                pass
             LOGGER.error(f"Failed adding pal: {traceback.format_exc()}")
             return None
         LOGGER.info(f"Added Pal {pal_entity} to Player {player}")

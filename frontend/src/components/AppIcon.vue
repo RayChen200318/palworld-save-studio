@@ -76,6 +76,33 @@ defineProps<{ name: string; size?: number }>()
       <template v-else-if="name === 'server'">
         <rect x="3" y="4" width="18" height="6" rx="2"/><rect x="3" y="14" width="18" height="6" rx="2"/><path d="M7 7h.01M7 17h.01M11 7h6M11 17h6"/>
       </template>
+      <template v-else-if="name === 'plus'">
+        <path d="M12 5v14M5 12h14"/>
+      </template>
+      <template v-else-if="name === 'book'">
+        <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H11v16H6.5A2.5 2.5 0 0 0 4 21V5.5ZM20 5.5A2.5 2.5 0 0 0 17.5 3H13v16h4.5A2.5 2.5 0 0 1 20 21V5.5Z"/>
+      </template>
+      <template v-else-if="name === 'dna'">
+        <path d="M7 3c0 7 10 11 10 18M17 3C17 10 7 14 7 21M8.5 6h7M7.5 10h9M7.5 14h9M8.5 18h7"/>
+      </template>
+      <template v-else-if="name === 'bolt'">
+        <path d="m13 2-8 12h7l-1 8 8-12h-7l1-8Z"/>
+      </template>
+      <template v-else-if="name === 'briefcase'">
+        <rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V4h6v3M3 12h18M10 12v2h4v-2"/>
+      </template>
+      <template v-else-if="name === 'code'">
+        <path d="m8 9-3 3 3 3M16 9l3 3-3 3M14 5l-4 14"/>
+      </template>
+      <template v-else-if="name === 'filter'">
+        <path d="M4 5h16l-6 7v6l-4 2v-8L4 5Z"/>
+      </template>
+      <template v-else-if="name === 'refresh'">
+        <path d="M20 7v5h-5M4 17v-5h5"/><path d="M18.2 9A7 7 0 0 0 6.4 6.4L4 9M5.8 15A7 7 0 0 0 17.6 17.6L20 15"/>
+      </template>
+      <template v-else-if="name === 'box'">
+        <path d="m4 7 8-4 8 4-8 4-8-4ZM4 7v10l8 4 8-4V7M12 11v10"/>
+      </template>
       <template v-else>
         <circle cx="12" cy="12" r="8"/><path d="M12 8v4M12 16h.01"/>
       </template>
