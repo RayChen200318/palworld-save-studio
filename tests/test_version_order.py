@@ -5,7 +5,7 @@ from palworld_save_studio.config import version_key
 
 class VersionOrderTests(unittest.TestCase):
     def test_older_public_beta_is_not_an_update_for_preview(self) -> None:
-        self.assertLess(version_key("v0.1.0-beta.1"), version_key("0.2.0-beta.1"))
+        self.assertLess(version_key("v0.1.0-beta.1"), version_key("0.3.0-beta.1"))
 
     def test_prerelease_order_is_semantic(self) -> None:
         ordered = [

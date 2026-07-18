@@ -47,7 +47,7 @@ describe('ApiClient', () => {
       status: 200,
       json: async () => ({
         status: 0,
-        data: { CurrentVersion: '0.2.0-beta.1', LatestVersion: null, UpdateAvailable: false, ReleaseUrl: null },
+        data: { CurrentVersion: '0.3.0-beta.1', LatestVersion: null, UpdateAvailable: false, ReleaseUrl: null },
       }),
     })
     const result = await new ApiClient('/api', fetcher).getUpdateStatus()

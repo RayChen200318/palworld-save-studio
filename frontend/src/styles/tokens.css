@@ -1,31 +1,60 @@
 :root {
   color-scheme: dark;
-  --bg-deep: #040b13;
-  --bg-app: #07111f;
-  --bg-elevated: #0b1928;
-  --surface: rgba(15, 34, 52, 0.86);
-  --surface-solid: #0f2234;
-  --surface-soft: rgba(143, 199, 220, 0.055);
-  --surface-hover: rgba(143, 214, 230, 0.09);
-  --border-subtle: rgba(141, 197, 217, 0.115);
-  --border-bright: rgba(66, 216, 230, 0.34);
-  --text-strong: #f1f7fa;
-  --text: #d4e2e8;
-  --text-muted: #8da5b2;
-  --text-faint: #607987;
-  --cyan-100: #d7fcff;
-  --cyan-200: #92f4fa;
-  --cyan-300: #4fe1ed;
-  --cyan-400: #23c7d8;
-  --cyan-500: #1098ae;
-  --gold-100: #fff0c5;
-  --gold-200: #f3d48a;
-  --gold-300: #dfb95f;
-  --green-300: #62d9a4;
-  --red-300: #f07878;
-  --red-400: #d94e5c;
-  --shadow-card: 0 18px 48px rgba(0, 0, 0, 0.2);
-  --radius-lg: 16px;
-  --radius-md: 12px;
-  --radius-sm: 9px;
+
+  /* Palworld Save Studio 0.3 brand */
+  --bg-deep: #05070d;
+  --bg-app: #080b14;
+  --bg-elevated: #0d1422;
+  --surface: rgba(20, 30, 48, 0.78);
+  --surface-solid: #141e30;
+  --surface-soft: rgba(170, 183, 200, 0.065);
+  --surface-hover: rgba(53, 230, 209, 0.09);
+  --surface-selected: rgba(139, 124, 255, 0.12);
+  --border-subtle: rgba(164, 188, 221, 0.16);
+  --border-bright: rgba(53, 230, 209, 0.42);
+  --border-violet: rgba(139, 124, 255, 0.42);
+
+  --text-strong: #f4f7fb;
+  --text: #d9e1ec;
+  --text-muted: #aab7c8;
+  --text-faint: #78879c;
+
+  --cyan-100: #d8fff9;
+  --cyan-200: #8cf7e9;
+  --cyan-300: #35e6d1;
+  --cyan-400: #20c8b8;
+  --cyan-500: #149588;
+  --violet-200: #bbb3ff;
+  --violet-300: #8b7cff;
+  --violet-400: #6f60e8;
+  --gold-100: #fff2cc;
+  --gold-200: #f7d88d;
+  --gold-300: #f2c66d;
+  --green-300: #55d6a5;
+  --red-300: #ff7a8a;
+  --red-400: #e85b70;
+
+  --shadow-card: 0 16px 40px rgba(0, 0, 0, 0.24);
+  --shadow-float: 0 24px 64px rgba(0, 0, 0, 0.42);
+  --glass-blur: 14px;
+  --radius-lg: 14px;
+  --radius-md: 11px;
+  --radius-sm: 8px;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+
+  --text-display: 40px;
+  --text-page: 28px;
+  --text-section: 18px;
+  --text-card: 15px;
+  --text-body: 15px;
+  --text-supporting: 13px;
+  --text-label: 12px;
+  --text-code: 11px;
 }

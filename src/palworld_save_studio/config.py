@@ -38,7 +38,7 @@ def get_app_data_path() -> Path:
 APP_DATA_PATH = get_app_data_path()
 CONFIG_PATH = APP_DATA_PATH / "config.json"
 
-VERSION = "0.2.0-beta.1"
+VERSION = "0.3.0-beta.1"
 RELEASE_TYPE = "BETA"
 BUILD_TIME = "0000000001"
 GIT_HASH = "0000000"
