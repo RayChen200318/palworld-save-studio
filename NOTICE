@@ -1,0 +1,20 @@
+Palworld Save Studio
+Copyright (C) 2026 RayChen200318
+
+This program is free software licensed under the GNU General Public License,
+version 3. See LICENSE for the complete license terms.
+
+This project contains modified source code and data derived from
+KrisCris/Palworld-Pal-Editor, which was distributed under GPL-3.0:
+https://github.com/KrisCris/Palworld-Pal-Editor
+
+The import baseline also includes Palworld 1.0 compatibility work from
+RayChen200318/Palworld-Pal-Editor-1.0 at commit
+ce5ff571ff34cca536bb13f398d9bd53420760e2:
+https://github.com/RayChen200318/Palworld-Pal-Editor-1.0
+
+Palworld Save Studio is an unofficial fan-made tool. Palworld and related
+names, marks, and assets are the property of Pocketpair, Inc. This project is
+not affiliated with, endorsed by, or sponsored by Pocketpair, Inc.
+
+The software is provided without warranty; see the GPL-3.0 terms in LICENSE.

@@ -1,0 +1,35 @@
+name: Windows CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test-and-package:
+    runs-on: windows-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements.txt
+      - name: Build, test, and package
+        shell: pwsh
+        run: .\build_executable.ps1
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Palworld-Save-Studio-Windows-x64
+          path: |
+            dist/Palworld-Save-Studio.exe
+            dist/Palworld-Save-Studio.exe.sha256
+          if-no-files-found: error
