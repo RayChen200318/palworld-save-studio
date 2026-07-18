@@ -3,10 +3,10 @@
 Palworld Save Studio is a Windows save editor for Palworld 1.0. It targets
 Windows 10/11 x64 and supports Steam and dedicated-server saves.
 
-[Download the latest release](https://github.com/RayChen200318/palworld-save-studio/releases/latest)
+[Download `0.1.0-beta.1`](https://github.com/RayChen200318/palworld-save-studio/releases/tag/0.1.0-beta.1)
 
-> `0.1.0-beta.1` has not been published yet. The release remains gated on
-> Windows packaging and write/reload verification with anonymized real saves.
+> `0.1.0-beta.1` is a public beta. Use a copy of your save while evaluating it
+> and report reproducible problems through GitHub Issues.
 
 ## Editing features
 
