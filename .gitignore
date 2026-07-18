@@ -6,6 +6,10 @@ logs/
 gamesave*/
 test_outputs/
 unused_data/
+# User save data and submitted validation archives must never enter Git history.
+*.sav
+*.sav.json
+*.zip
 #Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

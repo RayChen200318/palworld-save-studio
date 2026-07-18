@@ -36,7 +36,7 @@ class PalworldV1DataTests(unittest.TestCase):
         self.assertEqual(len(self.pals), 696)
         self.assertEqual(len(self.humans), 433)
         self.assertEqual(len(self.attacks), 384)
-        self.assertEqual(len(self.passives), 114)
+        self.assertEqual(len(self.passives), 115)
         self.assertEqual(len(self.technologies), 588)
         self.assertEqual(len(self.experience), 100)
 
@@ -77,6 +77,7 @@ class PalworldV1DataTests(unittest.TestCase):
             "RideJumpCount_Increase2",
             "Nocturnal",
             "NightOwl",
+            "MiniNushi",
         }
 
         self.assertTrue(expected.issubset(self.passives))
@@ -84,6 +85,8 @@ class PalworldV1DataTests(unittest.TestCase):
             self.passives["MutationPal_Mutant"]["Buff"]["b_Defense"], 0.25
         )
         self.assertEqual(self.passives["Legend"]["Buff"]["b_MoveSpeed"], 0.2)
+        self.assertEqual(self.passives["MiniNushi"]["Rating"], 3)
+        self.assertEqual(self.passives["MiniNushi"]["Buff"]["b_Defense"], 0.05)
 
     def test_level_cap_and_v1_technology_levels(self) -> None:
         from palworld_save_studio.core.pal_entity import PalEntity

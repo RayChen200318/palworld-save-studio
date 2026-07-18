@@ -608,6 +608,35 @@
             "b_MoveSpeed": 0.0
         }
     },
+    "MiniNushi": {
+        "InternalName": "MiniNushi",
+        "Rating": 3,
+        "I18n": {
+            "en": {
+                "Name": "Whopper",
+                "Description": "5% increase to Water attack damage 5% increase to Ice attack damage 5% increase to defense."
+            },
+            "zh-CN": {
+                "Name": "大猎物",
+                "Description": "水属性攻击伤害增加5% 冰属性攻击伤害增加5% 防御+5%"
+            },
+            "ja": {
+                "Name": "大物",
+                "Description": "水属性攻撃ダメージ増加5% 氷属性攻撃ダメージ増加5% 防御+5%"
+            },
+            "fr": {
+                "Name": "Caïd",
+                "Description": "Les dégâts de type Eau augmentent de 5 %. Les dégâts de type Glace augmentent de 5 %. Défense +5 %"
+            }
+        },
+        "Buff": {
+            "b_HP": 0.0,
+            "b_Attack": 0.0,
+            "b_Defense": 0.05,
+            "b_CraftSpeed": 0.0,
+            "b_MoveSpeed": 0.0
+        }
+    },
     "SwimSpeed_up_3": {
         "InternalName": "SwimSpeed_up_3",
         "Rating": 4,
