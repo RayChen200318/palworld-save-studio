@@ -87,7 +87,6 @@ if (Test-Path '.\dist') { Remove-Item '.\dist' -Recurse -Force }
     --add-data 'src/palworld_save_studio/assets;assets' `
     --add-data 'src/palworld_save_studio/webui;webui' `
     --hidden-import 'ooz' `
-    --hidden-import 'pkg_resources.extern' `
     --paths '.\src' `
     --name 'Palworld-Save-Studio' `
     --log-level INFO `

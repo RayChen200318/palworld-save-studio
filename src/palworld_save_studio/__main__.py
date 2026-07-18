@@ -1,9 +1,8 @@
 import argparse
 import traceback
-import asyncio
 
 from palworld_save_studio.utils import LOGGER, DataProvider, check_or_generate_port
-from palworld_save_studio.config import APP_DATA_PATH, Config, version_info, is_gh_build, get_new_version, CONFIG_PATH
+from palworld_save_studio.config import APP_DATA_PATH, Config, version_info, is_gh_build, CONFIG_PATH
 
 from palworld_save_studio.cli import InteractThread, main as cli_main
 from palworld_save_studio.gui import main as gui_main
@@ -64,17 +63,6 @@ def main():
     LOGGER.info(f"Running Palworld Save Studio version: {VER}")
     if not is_gh_build():
         LOGGER.warning("This version is not built by the official CI/CD pipeline. Be cautious and verify the source.")
-
-    async def check_new_version():
-        version = await get_new_version()
-        if version is not None:
-            LOGGER.info(f"New version available: {version[0]}")
-            LOGGER.info(f"GitHub Release: {version[1]}")
-    try:
-        loop = asyncio.get_running_loop()
-        loop.create_task(check_new_version())
-    except RuntimeError:
-        asyncio.run(check_new_version())
 
     match Config.mode:
         case "cli": cli_main()
