@@ -1,10 +1,11 @@
 <script setup lang="ts">
 withDefaults(defineProps<{ compact?: boolean }>(), { compact: false })
+const brandLogoUrl = '/brand/palworld-save-studio-logo.svg'
 </script>
 
 <template>
   <div class="brand-lockup" :class="{ compact }">
-    <img src="/brand/palworld-save-studio-logo.svg" alt="" class="brand-mark" />
+    <img :src="brandLogoUrl" alt="" class="brand-mark" />
     <div class="brand-words">
       <strong>Palworld</strong>
       <span>Save Studio</span>

@@ -21,6 +21,7 @@ const session = useSessionStore()
 const draft = useDraftStore()
 const collection = useCollectionStore()
 const items = useItemsStore()
+const brandLogoUrl = '/brand/palworld-save-studio-logo.svg'
 const copy = computed(() => messages[session.locale])
 const settingsOpen = ref(false)
 const disableBackupOpen = ref(false)
@@ -137,7 +138,7 @@ async function checkUpdate() {
     </ModalDialog>
 
     <ModalDialog :open="settingsOpen" :title="copy.settings.title" width="620px" @close="settingsOpen = false">
-      <div class="about-hero"><img src="/brand/palworld-save-studio-logo.svg" alt="" /><div><strong>Palworld Save Studio</strong><StatusPill tone="cyan">{{ copy.common.beta }}</StatusPill></div></div>
+      <div class="about-hero"><img :src="brandLogoUrl" alt="" /><div><strong>Palworld Save Studio</strong><StatusPill tone="cyan">{{ copy.common.beta }}</StatusPill></div></div>
       <div class="setting-row"><div><strong>{{ copy.settings.language }}</strong><p>简体中文 / English</p></div><LanguageToggle /></div>
       <div class="setting-row"><div><strong>{{ copy.settings.backup }}</strong><p>{{ copy.settings.backupHint }}</p></div><button class="toggle" :class="{ enabled: session.session.BackupEnabled }" type="button" :aria-pressed="session.session.BackupEnabled" @click="toggleBackup"><span /></button></div>
       <div class="setting-row"><div><strong>{{ copy.settings.update }}</strong><p>{{ copy.settings.updateHint }}</p></div><button class="button secondary compact-button" type="button" :disabled="updateState === 'checking'" @click="checkUpdate">{{ updateLabel }}</button></div>
