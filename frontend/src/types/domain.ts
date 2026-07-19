@@ -167,6 +167,7 @@ export interface PathChild {
 
 export interface PathContext {
   currentPath: string
+  roots: string[]
   children: Record<string, PathChild>
   isPalDir: boolean
 }

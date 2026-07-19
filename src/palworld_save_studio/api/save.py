@@ -17,6 +17,28 @@ from palworld_save_studio.utils.util import get_path_context, reply
 
 save_blueprint = Blueprint("save", __name__)
 
+PATH_NOT_FOUND_ERRORS = {2, 3, 15, 53, 64, 67, 1231}
+PATH_PERMISSION_ERRORS = {5, 65, 1326}
+PATH_INVALID_ERRORS = {123, 161}
+
+
+def _path_error_response(exc: Exception):
+    winerror = getattr(exc, "winerror", None)
+    if isinstance(exc, PermissionError) or winerror in PATH_PERMISSION_ERRORS:
+        return reply(1, msg="Permission denied while opening this directory."), 403
+    if isinstance(exc, FileNotFoundError) or winerror in PATH_NOT_FOUND_ERRORS:
+        return reply(1, msg="The path does not exist or the network location is unavailable."), 404
+    if isinstance(exc, (TypeError, ValueError, NotADirectoryError)) or winerror in PATH_INVALID_ERRORS:
+        return reply(1, msg="The path must be an absolute directory."), 400
+    LOGGER.error(f"Directory browser error: {exc!r}")
+    return reply(1, msg="The directory could not be opened."), 500
+
+
+def _open_path_context(path: Path):
+    context = get_path_context(path)
+    Config.path = context["currentPath"]
+    return reply(0, context)
+
 
 @save_blueprint.route("/fetch_config", methods=["GET"])
 def fetch_config():
@@ -227,58 +249,54 @@ def get_tech_data():
 @save_blueprint.route("/path", methods=["GET"])
 @jwt_required()
 def get_path():
-    try:
-        current_path = Path(Config.path).resolve()
-        if not current_path.exists():
-            raise Exception(f"Path {current_path} not exist.")
-    except:
-        pal_local_path = (
-            Path(os.environ.get("LOCALAPPDATA", "/")) / "Pal" / "Saved" / "SaveGames"
-        )
-        if pal_local_path.exists():
-            current_path = pal_local_path
-        else:
-            current_path = PROGRAM_PATH
+    candidates: list[Path] = []
+    if isinstance(Config.path, str) and Config.path.strip():
+        candidates.append(Path(Config.path))
+    candidates.append(
+        Path(os.environ.get("LOCALAPPDATA", "/")) / "Pal" / "Saved" / "SaveGames"
+    )
+    candidates.append(PROGRAM_PATH)
 
-    old_path = Config.path
-    Config.path = str(current_path)
+    last_error: Exception | None = None
+    seen: set[str] = set()
+    for current_path in candidates:
+        key = str(current_path)
+        if key in seen:
+            continue
+        seen.add(key)
+        try:
+            return _open_path_context(current_path)
+        except Exception as exc:
+            last_error = exc
 
-    try:
-        return reply(0, get_path_context(current_path))
-    except:
-        Config.path = old_path
-        LOGGER.error(traceback.format_exc())
-        return reply(1, msg=f"Error, cannot open path {current_path}.")
+    return _path_error_response(last_error or FileNotFoundError())
 
 
 @save_blueprint.route("/path", methods=["POST"])
 @jwt_required()
 def update_path():
-    path = Path(request.json.get("path")).resolve()
-    if not path.exists():
-        return reply(1, msg="Path Not Found")
-
-    old_path = Config.path
-    Config.path = str(path)
-
+    payload = request.get_json(silent=True) or {}
+    raw_path = payload.get("path")
     try:
-        return reply(0, get_path_context(path))
-    except:
-        Config.path = old_path
-        LOGGER.error(traceback.format_exc())
-        return reply(1, msg=f"Error, cannot open path {path}.")
+        if not isinstance(raw_path, str) or not raw_path.strip():
+            raise ValueError("Path is required.")
+        path = Path(raw_path.strip())
+        if not path.is_absolute():
+            raise ValueError("Path must be absolute.")
+        return _open_path_context(path)
+    except Exception as exc:
+        return _path_error_response(exc)
 
 
 @save_blueprint.route("/path", methods=["PATCH"])
 @jwt_required()
 def path_back():
-    path = Path(Config.path).parent.resolve()
-    old_path = Config.path
-    Config.path = str(path)
-
     try:
-        return reply(0, get_path_context(path))
-    except:
-        Config.path = old_path
-        LOGGER.error(traceback.format_exc())
-        return reply(1, msg=f"Error, cannot open path {path}.")
+        current_path = (
+            Path(Config.path)
+            if isinstance(Config.path, str) and Config.path.strip()
+            else PROGRAM_PATH
+        )
+        return _open_path_context(current_path.parent)
+    except Exception as exc:
+        return _path_error_response(exc)

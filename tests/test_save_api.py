@@ -1,4 +1,8 @@
 import unittest
+import os
+from pathlib import Path
+import subprocess
+from tempfile import TemporaryDirectory
 from unittest.mock import MagicMock, patch
 
 from flask_jwt_extended import create_access_token
@@ -16,9 +20,166 @@ class SaveApiTests(unittest.TestCase):
         self.client = app.test_client()
         self.headers = {"Authorization": f"Bearer {self.token}"}
         self.original_backup_enabled = Config.backup_enabled
+        self.original_path = Config.path
 
     def tearDown(self) -> None:
         Config.backup_enabled = self.original_backup_enabled
+        Config.path = self.original_path
+
+    def test_path_browser_opens_an_absolute_world_directory(self) -> None:
+        with TemporaryDirectory() as temp_directory:
+            world_path = Path(temp_directory) / "World"
+            (world_path / "Players").mkdir(parents=True)
+            (world_path / "Level.sav").write_bytes(b"fixture")
+
+            with patch.object(Config, "save_to_file") as save_config:
+                response = self.client.post(
+                    "/api/save/path",
+                    headers=self.headers,
+                    json={"path": str(world_path)},
+                )
+
+        payload = response.get_json()
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(payload["status"], 0)
+        self.assertEqual(payload["data"]["currentPath"], str(world_path.resolve()))
+        self.assertTrue(payload["data"]["isPalDir"])
+        self.assertTrue(payload["data"]["roots"])
+        self.assertEqual(Config.path, str(world_path.resolve()))
+        save_config.assert_not_called()
+
+    def test_path_browser_rejects_invalid_paths_without_changing_state(self) -> None:
+        Config.path = "/last/successful/path"
+        with TemporaryDirectory() as temp_directory:
+            file_path = Path(temp_directory) / "Level.sav"
+            file_path.write_bytes(b"fixture")
+            cases = (
+                (None, 400),
+                ("", 400),
+                ("~", 400),
+                ("relative/path", 400),
+                (str(file_path), 400),
+                (str(Path(temp_directory) / "missing"), 404),
+            )
+            for raw_path, expected_status in cases:
+                with self.subTest(path=raw_path):
+                    response = self.client.post(
+                        "/api/save/path",
+                        headers=self.headers,
+                        json={"path": raw_path},
+                    )
+                    self.assertEqual(response.status_code, expected_status)
+                    self.assertEqual(response.get_json()["status"], 1)
+                    self.assertEqual(Config.path, "/last/successful/path")
+
+    def test_path_browser_maps_permission_and_network_errors_atomically(self) -> None:
+        Config.path = "/last/successful/path"
+        inaccessible_path = str(Path.cwd().resolve())
+        network_error = OSError("network share unavailable")
+        network_error.winerror = 67
+
+        for error, expected_status in (
+            (PermissionError("denied"), 403),
+            (network_error, 404),
+            (OSError("unclassified"), 500),
+        ):
+            with self.subTest(error=error):
+                with patch(
+                    "palworld_save_studio.api.save.get_path_context",
+                    side_effect=error,
+                ):
+                    response = self.client.post(
+                        "/api/save/path",
+                        headers=self.headers,
+                        json={"path": inaccessible_path},
+                    )
+                self.assertEqual(response.status_code, expected_status)
+                self.assertEqual(Config.path, "/last/successful/path")
+
+    @unittest.skipUnless(os.name == "nt", "Windows path syntax is tested on Windows CI")
+    def test_path_browser_accepts_drive_and_unc_absolute_paths_on_windows(self) -> None:
+        Config.path = r"C:\last"
+        contexts = {
+            r"D:\Palworld\World": {
+                "currentPath": r"D:\Palworld\World",
+                "roots": ["C:\\", "D:\\"],
+                "children": {},
+                "isPalDir": True,
+            },
+            r"\\server\share\World": {
+                "currentPath": r"\\server\share\World",
+                "roots": ["C:\\", "D:\\"],
+                "children": {},
+                "isPalDir": True,
+            },
+        }
+
+        def context_for(path: Path):
+            return contexts[str(path)]
+
+        with patch(
+            "palworld_save_studio.api.save.get_path_context",
+            side_effect=context_for,
+        ):
+            for raw_path in contexts:
+                with self.subTest(path=raw_path):
+                    response = self.client.post(
+                        "/api/save/path",
+                        headers=self.headers,
+                        json={"path": raw_path},
+                    )
+                    self.assertEqual(response.status_code, 200)
+                    self.assertEqual(
+                        response.get_json()["data"]["currentPath"], raw_path
+                    )
+                    self.assertEqual(Config.path, raw_path)
+
+    @unittest.skipUnless(os.name == "nt", "Cross-drive integration runs on Windows CI")
+    def test_path_browser_navigates_to_a_real_d_drive_world_on_windows(self) -> None:
+        mapped_drive = False
+        backing_directory = None
+        drive_test_directory = None
+        drive_root = Path("D:\\")
+        if not drive_root.exists():
+            backing_directory = TemporaryDirectory()
+            subprocess.run(
+                ["subst", "D:", backing_directory.name],
+                check=True,
+                capture_output=True,
+            )
+            mapped_drive = True
+
+        try:
+            try:
+                drive_test_directory = TemporaryDirectory(dir=drive_root)
+            except OSError as exc:
+                self.skipTest(f"D: is not writable on this Windows runner: {exc}")
+            world_path = Path(drive_test_directory.name) / "World"
+            (world_path / "Players").mkdir(parents=True, exist_ok=True)
+            (world_path / "Level.sav").write_bytes(b"fixture")
+            Config.path = r"C:\last"
+
+            response = self.client.post(
+                "/api/save/path",
+                headers=self.headers,
+                json={"path": str(world_path)},
+            )
+
+            self.assertEqual(response.status_code, 200)
+            payload = response.get_json()["data"]
+            self.assertEqual(payload["currentPath"], str(world_path.resolve()))
+            self.assertIn("D:\\", payload["roots"])
+            self.assertTrue(payload["isPalDir"])
+        finally:
+            if drive_test_directory is not None:
+                drive_test_directory.cleanup()
+            if mapped_drive:
+                subprocess.run(
+                    ["subst", "D:", "/D"],
+                    check=True,
+                    capture_output=True,
+                )
+                backing_directory.cleanup()
 
     def test_session_uses_existing_response_envelope(self) -> None:
         manager = MagicMock()

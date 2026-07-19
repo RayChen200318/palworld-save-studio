@@ -227,7 +227,7 @@ def session():
 
 
 @app.route("/api/save/fetch_config")
-def config(): return ok({"I18n": "zh-CN", "I18nList": {"zh-CN": "简体中文", "en": "English"}, "Path": session()["Path"], "HasPassword": False, "VERSION": "0.4.1", "IsOfficialBuild": False, "BackupEnabled": True})
+def config(): return ok({"I18n": "zh-CN", "I18nList": {"zh-CN": "简体中文", "en": "English"}, "Path": session()["Path"], "HasPassword": False, "VERSION": "0.4.2", "IsOfficialBuild": False, "BackupEnabled": True})
 
 
 @app.route("/api/auth/login", methods=["POST"])
@@ -268,7 +268,21 @@ def i18n(): return ok()
 
 
 @app.route("/api/save/path", methods=["GET", "POST", "PATCH"])
-def path(): return ok({"currentPath": session()["Path"], "children": {}, "isPalDir": True})
+def path():
+    current_path = session()["Path"]
+    if request.method == "POST":
+        current_path = (request.json or {}).get("path") or current_path
+    elif request.method == "PATCH":
+        current_path = r"C:\Users\Ray\AppData\Local\Pal\Saved\SaveGames\7656119"
+    return ok({
+        "currentPath": current_path,
+        "roots": ["C:\\", "D:\\", "E:\\", "Z:\\"],
+        "children": {
+            f"{current_path}\\World_A62F18C9": {"filename": "World_A62F18C9", "isDir": True},
+            f"{current_path}\\Level.sav": {"filename": "Level.sav", "isDir": False},
+        },
+        "isPalDir": current_path == session()["Path"],
+    })
 
 
 @app.route("/api/save/pal_data")
