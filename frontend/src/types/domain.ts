@@ -181,3 +181,104 @@ export interface PalFilters {
   anomaly: string
   sort: PalSort
 }
+
+export type ItemContainerName = 'common' | 'essential' | 'food' | 'weapon' | 'armor' | 'drop'
+
+export interface LocalizedText {
+  en: string
+  'zh-CN': string
+}
+
+export interface ItemCatalogEntry {
+  StaticId: string
+  BaseKey: string
+  I18n: LocalizedText
+  Category: string
+  TypeA: string
+  TypeB: string
+  EquipSlot: string | null
+  AllowedContainers: ItemContainerName[]
+  Rarity: number
+  Rank: number
+  SortId: number
+  MaxStack: number
+  DynamicType: 'weapon' | 'armor' | 'egg' | null
+  MaxDurability: number
+  MagazineSize: number
+  IconKey: string
+}
+
+export interface ItemCatalogGroup {
+  BaseKey: string
+  I18n: LocalizedText
+  Category: string
+  IconKey: string
+  Variants: string[]
+}
+
+export interface EggSpecies {
+  CharacterId: string
+  I18n: LocalizedText
+  IconAccessKey: string
+}
+
+export interface ItemCatalog {
+  Source: Record<string, unknown>
+  Items: Record<string, ItemCatalogEntry>
+  Groups: ItemCatalogGroup[]
+  EggSpecies: EggSpecies[]
+}
+
+export interface ItemVariantSummary {
+  StaticId: string
+  Rarity: number
+  I18n: LocalizedText
+}
+
+export interface ItemSlotItem {
+  StaticId: string
+  I18n: LocalizedText
+  IconKey: string | null
+  Category: string
+  Quantity: number
+  MaxStack: number | null
+  Rarity: number | null
+  Variants: ItemVariantSummary[]
+  DynamicId: string | null
+  DynamicType: string | null
+  Durability: number | null
+  MaxDurability: number | null
+  Ammo: number | null
+  MagazineSize: number | null
+  PassiveSkills: string[]
+  EggCharacterId: string | null
+  StateFlags: string[]
+}
+
+export interface ItemSlot {
+  Container: ItemContainerName
+  SlotIndex: number
+  SlotType: string | null
+  Unlocked: boolean
+  Item: ItemSlotItem | null
+}
+
+export interface PlayerItemContainer {
+  ContainerId: string
+  Capacity: number
+  PhysicalCapacity: number
+  UnlockedIndices: number[]
+  Slots: ItemSlot[]
+  ReadOnlyTarget: boolean
+}
+
+export interface PlayerInventory {
+  PlayerId: string
+  PlayerName: string
+  Containers: Record<ItemContainerName, PlayerItemContainer>
+}
+
+export interface ItemMutationResult {
+  Inventory: PlayerInventory
+  DirtyRevision: number
+}

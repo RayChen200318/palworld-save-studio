@@ -2,6 +2,7 @@ include src/palworld_save_studio/assets/*
 include src/palworld_save_studio/assets/data/*
 include src/palworld_save_studio/assets/icons/elements/*
 include src/palworld_save_studio/assets/icons/pals/*
+include src/palworld_save_studio/assets/icons/items/*
 include src/palworld_save_studio/webui/*
 include src/palworld_save_studio/webui/assets/*
 include src/palworld_save_studio/webui/icons/*

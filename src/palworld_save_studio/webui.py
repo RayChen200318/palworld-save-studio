@@ -14,6 +14,7 @@ import mimetypes
 mimetypes.add_type('application/javascript', '.js')
 mimetypes.add_type('text/css', '.css')
 mimetypes.add_type('image/png', '.png')
+mimetypes.add_type('image/webp', '.webp')
 mimetypes.add_type('text/html', '.html')
 
 app = Flask(__name__, static_folder=ASSETS_PATH / "webui", static_url_path='/')
@@ -21,6 +22,7 @@ app.register_blueprint(player_blueprint, url_prefix='/api/player')
 app.register_blueprint(pal_blueprint, url_prefix='/api/pal')
 app.register_blueprint(save_blueprint, url_prefix='/api/save')
 app.register_blueprint(auth_blueprint, url_prefix='/api/auth')
+app.register_blueprint(item_blueprint, url_prefix='/api/item')
 
 app.config['JWT_SECRET_KEY'] = Config.JWT_SECRET_KEY
 jwt = JWTManager(app)
@@ -30,7 +32,8 @@ jwt = JWTManager(app)
 def serve_image(icon_type, filename):
     if icon_type == 'pals' and '-' in filename:
         filename = filename.replace('-', '/')
-    image_path: Path = ASSETS_PATH / 'assets/icons' / icon_type / f"{filename}.png"
+    extension = '.webp' if icon_type == 'items' else '.png'
+    image_path: Path = ASSETS_PATH / 'assets/icons' / icon_type / f"{filename}{extension}"
     if image_path.exists():
         directory = image_path.parent
         filename = image_path.name

@@ -1,4 +1,4 @@
-name: Release Windows beta
+name: Release Windows
 
 on:
   push:
@@ -35,6 +35,5 @@ jobs:
           .\dist\Palworld-Save-Studio.exe
           .\dist\Palworld-Save-Studio.exe.sha256
           --verify-tag
-          --prerelease
           --generate-notes
           --title "Palworld Save Studio $env:GITHUB_REF_NAME"

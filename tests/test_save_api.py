@@ -4,6 +4,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from flask_jwt_extended import create_access_token
 
 from palworld_save_studio.config import Config
+from palworld_save_studio.core.item_inventory import ItemInventoryError
 from palworld_save_studio.webui import app
 
 
@@ -76,7 +77,7 @@ class SaveApiTests(unittest.TestCase):
 
     def test_update_check_reads_the_new_repository_release_status(self) -> None:
         result = {
-            "CurrentVersion": "0.1.0-beta.1",
+            "CurrentVersion": "0.3.0",
             "LatestVersion": None,
             "UpdateAvailable": False,
             "ReleaseUrl": None,
@@ -95,6 +96,60 @@ class SaveApiTests(unittest.TestCase):
         groups = response.get_json()["data"]["techLvDict"]
         first_item = next(item for items in groups.values() for item in items)
         self.assertIsInstance(first_item["I18n"], str)
+
+    def test_item_mutation_marks_one_dirty_revision(self) -> None:
+        manager = MagicMock()
+        manager._loaded = True
+        manager.item_inventory.add_item.return_value = {"PlayerId": "player-1", "Containers": {}}
+        manager.mark_dirty.return_value = 4
+        with patch("palworld_save_studio.api.item.SaveManager", return_value=manager):
+            response = self.client.post(
+                "/api/item/player/player-1",
+                headers=self.headers,
+                json={"StaticId": "Wood", "Container": "common", "Quantity": 20, "SlotIndex": 2},
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json()["data"]["DirtyRevision"], 4)
+        manager.item_inventory.add_item.assert_called_once_with(
+            "player-1", "Wood", "common", 20, 2, None
+        )
+        manager.mark_dirty.assert_called_once_with()
+
+    def test_rejected_item_mutation_does_not_mark_dirty(self) -> None:
+        manager = MagicMock()
+        manager._loaded = True
+        manager.item_inventory.move_item.side_effect = ItemInventoryError("incompatible target")
+        with patch("palworld_save_studio.api.item.SaveManager", return_value=manager):
+            response = self.client.post(
+                "/api/item/player/player-1/move",
+                headers=self.headers,
+                json={
+                    "Source": {"Container": "common", "SlotIndex": 0},
+                    "Target": {"Container": "armor", "SlotIndex": 0},
+                },
+            )
+
+        self.assertEqual(response.status_code, 409)
+        self.assertIn("incompatible", response.get_json()["msg"])
+        manager.mark_dirty.assert_not_called()
+
+    def test_dangerous_item_delete_forwards_explicit_confirmation(self) -> None:
+        manager = MagicMock()
+        manager._loaded = True
+        manager.item_inventory.delete_item.return_value = {"PlayerId": "player-1", "Containers": {}}
+        manager.mark_dirty.return_value = 5
+        with patch("palworld_save_studio.api.item.SaveManager", return_value=manager):
+            response = self.client.delete(
+                "/api/item/player/player-1/essential/0",
+                headers=self.headers,
+                json={"ConfirmDangerous": True},
+            )
+
+        self.assertEqual(response.status_code, 200)
+        manager.item_inventory.delete_item.assert_called_once_with(
+            "player-1", "essential", 0, True
+        )
 
 
 if __name__ == "__main__":

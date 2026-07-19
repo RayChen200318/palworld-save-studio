@@ -24,6 +24,8 @@ HUMANS = load("human_data.json")
 PASSIVES = load("pal_passives.json")
 ATTACKS = load("pal_attacks.json")
 TECH = load("tech_data.json")
+ITEM_DATA = load("item_data.json")
+ITEM_GROUPS = {group["BaseKey"]: group for group in ITEM_DATA["Groups"]}
 PLAYERS = [
     {"PlayerUId": "player-ray", "InstanceId": "instance-ray", "NickName": "Ray", "Level": 80, "HasViewingCage": True, "OtomoCharacterContainerId": "party-ray", "PalStorageContainerId": "palbox-ray", "TechnologyPoint": 42, "BossTechnologyPoint": 7, "PalCount": 96},
     {"PlayerUId": "player-mia", "InstanceId": "instance-mia", "NickName": "Mia", "Level": 62, "HasViewingCage": True, "OtomoCharacterContainerId": "party-mia", "PalStorageContainerId": "palbox-mia", "TechnologyPoint": 18, "BossTechnologyPoint": 3, "PalCount": 71},
@@ -34,6 +36,113 @@ HUMAN_SPECIES = ["Hunter_Rifle", "Hunter_Handgun", "Police_Rifle", "Male_Trader0
 revision = 0
 
 
+def fixture_item(static_id: str, quantity: int = 1, **overrides):
+    record = ITEM_DATA["Items"][static_id]
+    group = ITEM_GROUPS.get(record["BaseKey"], {"Variants": [static_id]})
+    variants = [
+        {
+            "StaticId": variant_id,
+            "Rarity": ITEM_DATA["Items"][variant_id]["Rarity"],
+            "I18n": ITEM_DATA["Items"][variant_id]["I18n"],
+        }
+        for variant_id in group["Variants"]
+        if variant_id in ITEM_DATA["Items"]
+    ]
+    dynamic_type = record["DynamicType"]
+    item = {
+        "StaticId": static_id,
+        "I18n": record["I18n"],
+        "IconKey": record["IconKey"],
+        "Category": record["Category"],
+        "Quantity": quantity,
+        "MaxStack": record["MaxStack"],
+        "Rarity": record["Rarity"],
+        "Variants": variants,
+        "DynamicId": f"fixture-{static_id.lower()}" if dynamic_type else None,
+        "DynamicType": dynamic_type,
+        "Durability": round(record["MaxDurability"] * 0.84, 1) if record["MaxDurability"] else None,
+        "MaxDurability": record["MaxDurability"] or None,
+        "Ammo": min(record["MagazineSize"], 6) if record["MagazineSize"] else None,
+        "MagazineSize": record["MagazineSize"] or None,
+        "PassiveSkills": ["WeaponAttackUp_2"] if dynamic_type == "weapon" else [],
+        "EggCharacterId": None,
+        "StateFlags": [],
+    }
+    item.update(overrides)
+    return item
+
+
+def fixture_container(name: str, capacity: int, contents=None, slot_types=None, read_only=False):
+    contents = contents or {}
+    slot_types = slot_types or {}
+    return {
+        "ContainerId": f"fixture-{name}",
+        "Capacity": capacity,
+        "PhysicalCapacity": capacity,
+        "UnlockedIndices": list(range(capacity)),
+        "Slots": [
+            {
+                "Container": name,
+                "SlotIndex": index,
+                "SlotType": slot_types.get(index),
+                "Unlocked": True,
+                "Item": contents.get(index),
+            }
+            for index in range(capacity)
+        ],
+        "ReadOnlyTarget": read_only,
+    }
+
+
+def fixture_inventory(player_id: str):
+    player = next((item for item in PLAYERS if item["PlayerUId"] == player_id), PLAYERS[0])
+    common = {
+        0: fixture_item("Wood", 642),
+        1: fixture_item("Stone", 418),
+        2: fixture_item("Pal_crystal_S", 96),
+        3: fixture_item("Money", 128450),
+        4: fixture_item("HandgunBullet", 320),
+        5: fixture_item("PalSphere", 74),
+        6: fixture_item("BerrySeeds", 56),
+        7: fixture_item("Baked_Berries", 31),
+        8: fixture_item("RoughBullet", 180),
+        9: fixture_item("AssaultRifleBullet", 240),
+        10: fixture_item("PumpActionShotgun", Durability=126.0, Ammo=6),
+        12: {
+            "StaticId": "Legacy_Fixture_Item",
+            "I18n": {"en": "Legacy_Fixture_Item", "zh-CN": "Legacy_Fixture_Item"},
+            "IconKey": None,
+            "Category": "unknown",
+            "Quantity": 1,
+            "MaxStack": None,
+            "Rarity": None,
+            "Variants": [],
+            "DynamicId": None,
+            "DynamicType": None,
+            "Durability": None,
+            "MaxDurability": None,
+            "Ammo": None,
+            "MagazineSize": None,
+            "PassiveSkills": [],
+            "EggCharacterId": None,
+            "StateFlags": ["unknown-item"],
+        },
+    }
+    armor_slots = {0: "head", 1: "body", 2: "shield", 3: "glider", 4: "accessory", 5: "accessory"}
+    return {
+        "PlayerId": player["PlayerUId"],
+        "PlayerName": player["NickName"],
+        "Containers": {
+            "common": fixture_container("common", 42, common),
+            "essential": fixture_container("essential", 18),
+            "food": fixture_container("food", 5, {0: fixture_item("Baked_Berries", 31)}),
+            "weapon": fixture_container("weapon", 6, {0: fixture_item("PumpActionShotgun", Durability=126.0, Ammo=6)}),
+            "armor": fixture_container("armor", 6, slot_types=armor_slots),
+            "drop": fixture_container("drop", 4, {0: fixture_item("Stone", 24)}, read_only=True),
+        },
+    }
+
+
 def ok(data=None):
     return jsonify({"status": 0, "data": data, "msg": None})
 
@@ -41,6 +150,11 @@ def ok(data=None):
 def localized(record):
     value = record.get("I18n", {}).get("zh-CN") or record.get("I18n", {}).get("en") or record["InternalName"]
     return value.get("Name", record["InternalName"]) if isinstance(value, dict) else value
+
+
+def localized_for(record, locale: str, fallback: str):
+    value = record.get("I18n", {}).get(locale) or fallback
+    return value.get("Name", fallback) if isinstance(value, dict) else value
 
 
 def pal_summary(index: int):
@@ -91,7 +205,7 @@ def session():
 
 
 @app.route("/api/save/fetch_config")
-def config(): return ok({"I18n": "zh-CN", "I18nList": {"zh-CN": "简体中文", "en": "English"}, "Path": session()["Path"], "HasPassword": False, "VERSION": "0.1.0-beta.1", "IsOfficialBuild": False, "BackupEnabled": True})
+def config(): return ok({"I18n": "zh-CN", "I18nList": {"zh-CN": "简体中文", "en": "English"}, "Path": session()["Path"], "HasPassword": False, "VERSION": "0.3.0", "IsOfficialBuild": False, "BackupEnabled": True})
 
 
 @app.route("/api/auth/login", methods=["POST"])
@@ -129,7 +243,7 @@ def settings():
 
 @app.route("/api/save/update")
 def update_status():
-    return ok({"CurrentVersion": "0.1.0-beta.1", "LatestVersion": None, "UpdateAvailable": False, "ReleaseUrl": None})
+    return ok({"CurrentVersion": "0.3.0", "LatestVersion": None, "UpdateAvailable": False, "ReleaseUrl": None})
 
 
 @app.route("/api/save/i18n", methods=["PATCH"])
@@ -253,10 +367,50 @@ def unlock_all(player_id):
     return ok({"Player": value, "DirtyRevision": revision})
 
 
+@app.route("/api/item/catalog")
+def item_catalog():
+    egg_species = []
+    for key in SPECIES[:8]:
+        record = PALS[key]
+        egg_species.append({
+            "CharacterId": key,
+            "I18n": {
+                "en": localized_for(record, "en", key),
+                "zh-CN": localized_for(record, "zh-CN", key),
+            },
+            "IconAccessKey": key,
+        })
+    return ok(ITEM_DATA | {"EggSpecies": egg_species})
+
+
+@app.route("/api/item/player/<player_id>", methods=["GET", "POST"])
+def player_items(player_id):
+    global revision
+    inventory = fixture_inventory(player_id)
+    if request.method == "GET":
+        return ok(inventory)
+    revision += 1
+    return ok({"Inventory": inventory, "DirtyRevision": revision})
+
+
+@app.route("/api/item/player/<player_id>/<container>/<int:slot_index>", methods=["PATCH", "DELETE"])
+def mutate_player_item(player_id, container, slot_index):
+    global revision
+    revision += 1
+    return ok({"Inventory": fixture_inventory(player_id), "DirtyRevision": revision})
+
+
+@app.route("/api/item/player/<player_id>/move", methods=["POST"])
+def move_player_item(player_id):
+    global revision
+    revision += 1
+    return ok({"Inventory": fixture_inventory(player_id), "DirtyRevision": revision})
+
+
 @app.route("/image/<icon_type>/<path:filename>")
 def image(icon_type, filename):
     path = ASSETS / "icons" / icon_type
-    target = path / f"{filename}.png"
+    target = path / f"{filename}.webp" if icon_type == "items" else path / f"{filename}.png"
     if not target.is_file() and icon_type == "pals": target = ASSETS / "icons/pals/unknown.png"
     if not target.is_file(): return "", 404
     return send_from_directory(target.parent, target.name)

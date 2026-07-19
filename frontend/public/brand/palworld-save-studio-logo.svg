@@ -1,27 +1,33 @@
 <svg width="80" height="80" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="crystal" x1="20" y1="12" x2="61" y2="69" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#73F4FF"/>
-      <stop offset="0.52" stop-color="#20CFE3"/>
-      <stop offset="1" stop-color="#0B789A"/>
+    <linearGradient id="layerBack" x1="14" y1="25" x2="65" y2="67" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#8B7CFF"/>
+      <stop offset="1" stop-color="#5548C9"/>
     </linearGradient>
-    <linearGradient id="edge" x1="17" y1="15" x2="66" y2="64" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#D8FBFF"/>
-      <stop offset="1" stop-color="#38BBD0"/>
+    <linearGradient id="layerFront" x1="19" y1="13" x2="62" y2="60" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#8CF7E9"/>
+      <stop offset="0.52" stop-color="#35E6D1"/>
+      <stop offset="1" stop-color="#20AFA3"/>
     </linearGradient>
-    <filter id="glow" x="5" y="3" width="70" height="75" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
-      <feGaussianBlur stdDeviation="3"/>
-    </filter>
+    <linearGradient id="rim" x1="17" y1="14" x2="64" y2="63" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#E5FFFB"/>
+      <stop offset="0.48" stop-color="#63ECDD"/>
+      <stop offset="1" stop-color="#9E92FF"/>
+    </linearGradient>
   </defs>
-  <path d="M40 7L64 22L60 58L40 73L20 58L16 22L40 7Z" fill="#1CD7E5" opacity=".28" filter="url(#glow)"/>
-  <path d="M40 8L63 22L59 57L40 72L21 57L17 22L40 8Z" fill="url(#crystal)" stroke="url(#edge)" stroke-width="2"/>
-  <path d="M40 8L40 72L21 57L17 22L40 8Z" fill="#0C91AD" opacity=".56"/>
-  <path d="M40 8L63 22L59 57L40 72V8Z" fill="#5CEAF1" opacity=".23"/>
-  <path d="M17 22L40 30L63 22M40 30V72" stroke="#B8F8FC" stroke-opacity=".48" stroke-width="1.5"/>
-  <ellipse cx="40" cy="47.5" rx="10.5" ry="8.5" fill="#071522"/>
-  <ellipse cx="27.8" cy="38" rx="4.2" ry="5.1" transform="rotate(-24 27.8 38)" fill="#071522"/>
-  <ellipse cx="37" cy="33" rx="4.2" ry="5.2" transform="rotate(-6 37 33)" fill="#071522"/>
-  <ellipse cx="47.2" cy="34" rx="4.2" ry="5.2" transform="rotate(10 47.2 34)" fill="#071522"/>
-  <ellipse cx="55.2" cy="40" rx="4.2" ry="5" transform="rotate(27 55.2 40)" fill="#071522"/>
-  <path d="M35 48.5C36.8 45.5 43.3 45.5 45 48.5" stroke="#E8C46C" stroke-width="2" stroke-linecap="round"/>
+
+  <!-- Three offset save-data layers form a compact, original app mark. -->
+  <path d="M40 24L68 39V56L40 72L12 56V39L40 24Z" fill="url(#layerBack)" opacity=".72"/>
+  <path d="M40 18L67 33V51L40 67L13 51V33L40 18Z" fill="#101829" stroke="#8B7CFF" stroke-width="1.8"/>
+  <path d="M40 8L64 22V45L40 59L16 45V22L40 8Z" fill="url(#layerFront)" stroke="url(#rim)" stroke-width="2"/>
+  <path d="M17 44L40 57L63 44" stroke="#E5FFFB" stroke-opacity=".5" stroke-width="1.5"/>
+  <path d="M18 23L40 36L62 23" stroke="#F4FFFD" stroke-opacity=".38" stroke-width="1.5"/>
+
+  <!-- Paw-shaped negative data signature. -->
+  <ellipse cx="40" cy="42.5" rx="9.2" ry="7.2" fill="#080B14"/>
+  <ellipse cx="29.1" cy="34.4" rx="3.7" ry="4.6" transform="rotate(-24 29.1 34.4)" fill="#080B14"/>
+  <ellipse cx="37.1" cy="29.8" rx="3.6" ry="4.7" transform="rotate(-7 37.1 29.8)" fill="#080B14"/>
+  <ellipse cx="45.8" cy="30.5" rx="3.6" ry="4.7" transform="rotate(9 45.8 30.5)" fill="#080B14"/>
+  <ellipse cx="52.5" cy="35.8" rx="3.6" ry="4.5" transform="rotate(24 52.5 35.8)" fill="#080B14"/>
+  <path d="M34.5 43.5C36.8 40.8 43.2 40.8 45.5 43.5" stroke="#8B7CFF" stroke-width="2" stroke-linecap="round"/>
 </svg>

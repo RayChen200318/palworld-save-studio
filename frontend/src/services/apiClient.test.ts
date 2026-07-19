@@ -47,11 +47,30 @@ describe('ApiClient', () => {
       status: 200,
       json: async () => ({
         status: 0,
-        data: { CurrentVersion: '0.1.0-beta.1', LatestVersion: null, UpdateAvailable: false, ReleaseUrl: null },
+        data: { CurrentVersion: '0.3.0', LatestVersion: null, UpdateAvailable: false, ReleaseUrl: null },
       }),
     })
     const result = await new ApiClient('/api', fetcher).getUpdateStatus()
     expect(result.UpdateAvailable).toBe(false)
     expect(fetcher).toHaveBeenCalledWith('/api/save/update', expect.any(Object))
+  })
+
+  it('sends item moves through the typed player-scoped endpoint', async () => {
+    const fetcher = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ status: 0, data: { Inventory: {}, DirtyRevision: 3 } }),
+    })
+    const client = new ApiClient('/api', fetcher)
+    await client.moveItem(
+      'player/one',
+      { Container: 'common', SlotIndex: 2 },
+      { Container: 'weapon', SlotIndex: 0 },
+    )
+    expect(fetcher).toHaveBeenCalledWith(
+      '/api/item/player/player%2Fone/move',
+      expect.objectContaining({ method: 'POST' }),
+    )
+    expect(fetcher.mock.calls[0][1].body).toContain('"SlotIndex":2')
   })
 })

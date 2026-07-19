@@ -9,7 +9,7 @@ const config: SaveConfig = {
   I18nList: { 'zh-CN': '简体中文', en: 'English' },
   Path: null,
   HasPassword: false,
-  VERSION: '0.1.0-beta.1',
+  VERSION: '0.3.0',
   IsOfficialBuild: false,
   BackupEnabled: true,
 }

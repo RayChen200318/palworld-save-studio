@@ -25,6 +25,7 @@ from palworld_save_studio.core.save_transaction import (
     SaveTransactionError,
     replace_staged_files,
 )
+from palworld_save_studio.core.item_inventory import ItemInventoryService
 
 
 def skip_decode(reader: FArchiveReader, type_name: str, size: int, path: str):
@@ -104,8 +105,6 @@ MAIN_SKIP_PROPERTIES = copy.deepcopy(PALWORLD_CUSTOM_PROPERTIES)
 MAIN_SKIP_PROPERTIES[".worldSaveData.MapObjectSaveData"] = (skip_decode, skip_encode)
 MAIN_SKIP_PROPERTIES[".worldSaveData.FoliageGridSaveDataMap"] = (skip_decode, skip_encode)
 MAIN_SKIP_PROPERTIES[".worldSaveData.MapObjectSpawnerInStageSaveData"] = (skip_decode, skip_encode)
-MAIN_SKIP_PROPERTIES[".worldSaveData.DynamicItemSaveData"] = (skip_decode, skip_encode)
-MAIN_SKIP_PROPERTIES[".worldSaveData.ItemContainerSaveData"] = (skip_decode, skip_encode)
 MAIN_SKIP_PROPERTIES[".worldSaveData.WorkSaveData"] = (skip_decode, skip_encode)
 MAIN_SKIP_PROPERTIES[".worldSaveData.DungeonSaveData"] = (skip_decode, skip_encode)
 MAIN_SKIP_PROPERTIES[".worldSaveData.EnemyCampSaveData"] = (skip_decode, skip_encode)
@@ -146,6 +145,7 @@ class SaveManager:
     container_data: Optional[ContainerData]
     group_data: Optional[GroupData]
     camp_data: Optional[BaseCampData]
+    item_inventory: Optional[ItemInventoryService]
 
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
@@ -166,6 +166,7 @@ class SaveManager:
             self.container_data = None
             self.group_data = None
             self.camp_data = None
+            self.item_inventory = None
             self._loaded = False
             self._dirty_revision = 0
             self._last_commit: dict[str, Any] | None = None
@@ -238,6 +239,12 @@ class SaveManager:
 
             self._load_entities()
 
+            try:
+                self.item_inventory = ItemInventoryService(self)
+            except Exception as e:
+                LOGGER.error(f"Error parsing player item inventories: {e}")
+                return None
+
             LOGGER.info("Done")
         self._loaded = True
         if reset_session:
@@ -300,6 +307,7 @@ class SaveManager:
                 "container_data",
                 "group_data",
                 "camp_data",
+                "item_inventory",
                 "_loaded",
                 "_dirty_revision",
                 "_last_commit",
@@ -373,7 +381,11 @@ class SaveManager:
                 }
             )
         pals.sort(key=lambda item: item["id"])
-        return {"players": players, "pals": pals}
+        return {
+            "players": players,
+            "pals": pals,
+            "items": self.item_inventory.semantic_snapshot() if self.item_inventory else None,
+        }
 
     def commit(self) -> dict[str, Any]:
         if not self._loaded or self._file_path is None:

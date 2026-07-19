@@ -4,6 +4,7 @@ from pathlib import Path
 import sys
 import aiohttp
 import secrets
+import re
 
 def get_program_path():
     # If running in AppImage, use the real file path
@@ -37,8 +38,8 @@ def get_app_data_path() -> Path:
 APP_DATA_PATH = get_app_data_path()
 CONFIG_PATH = APP_DATA_PATH / "config.json"
 
-VERSION = "0.1.0-beta.1"
-RELEASE_TYPE = "BETA"
+VERSION = "0.3.0"
+RELEASE_TYPE = "RELEASE"
 BUILD_TIME = "0000000001"
 GIT_HASH = "0000000"
 REPO = "undefined"
@@ -54,6 +55,28 @@ def version_info() -> str:
 
 def is_gh_build() -> bool:
     return GIT_HASH != "0000000"
+
+
+_VERSION_PATTERN = re.compile(
+    r"^v?(\d+)\.(\d+)\.(\d+)(?:-(alpha|beta|rc)\.(\d+))?$",
+    re.IGNORECASE,
+)
+
+
+def version_key(value: str) -> tuple[int, int, int, int, int]:
+    """Return the release order used by Palworld Save Studio tags."""
+    match = _VERSION_PATTERN.fullmatch(value.strip())
+    if match is None:
+        raise ValueError(f"Unsupported version: {value}")
+    major, minor, patch, stage, serial = match.groups()
+    stage_rank = {"alpha": 0, "beta": 1, "rc": 2, None: 3}
+    return (
+        int(major),
+        int(minor),
+        int(patch),
+        stage_rank[stage.lower() if stage else None],
+        int(serial or 0),
+    )
 
 async def get_release_status() -> dict:
     releases_url = "https://api.github.com/repos/RayChen200318/palworld-save-studio/releases/latest"
@@ -74,12 +97,10 @@ async def get_release_status() -> dict:
     latest = release.get("tag_name")
     if not isinstance(latest, str) or not latest:
         raise RuntimeError("The latest Release has no tag name.")
-    current_normalized = VERSION.removeprefix("v")
-    latest_normalized = latest.removeprefix("v")
     return {
         "CurrentVersion": VERSION,
         "LatestVersion": latest,
-        "UpdateAvailable": latest_normalized != current_normalized,
+        "UpdateAvailable": version_key(latest) > version_key(VERSION),
         "ReleaseUrl": release.get("html_url"),
     }
 

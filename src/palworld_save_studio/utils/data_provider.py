@@ -36,6 +36,7 @@ PAL_PASSIVES: dict[str, dict] = load_json("pal_passives.json")
 PAL_EXP_TABLE: list[int] = load_json("pal_exp_table.json")
 PAL_FRIENDSHIP: dict[str, dict] = load_json("pal_friendship.json")
 TECH_DATA: dict[str, dict] = load_json("tech_data.json")
+ITEM_DATA: dict[str, Any] = load_json("item_data.json")
 
 # PAL_ICONS: dict[str] = load_icons("pals")
 
@@ -316,6 +317,32 @@ class DataProvider:
     @staticmethod
     def get_tech_data() -> dict[str, dict]:
         return TECH_DATA
+
+    @staticmethod
+    def get_item_catalog() -> dict[str, Any]:
+        return ITEM_DATA
+
+    @staticmethod
+    def get_item_data(static_id: str) -> Optional[dict[str, Any]]:
+        return ITEM_DATA["Items"].get(static_id)
+
+    @staticmethod
+    def get_item_groups() -> list[dict[str, Any]]:
+        return ITEM_DATA["Groups"]
+
+    @staticmethod
+    def get_item_variants(static_id: str) -> list[dict[str, Any]]:
+        item = DataProvider.get_item_data(static_id)
+        if not item:
+            return []
+        for group in ITEM_DATA["Groups"]:
+            if group["BaseKey"] == item["BaseKey"]:
+                return [
+                    ITEM_DATA["Items"][variant]
+                    for variant in group["Variants"]
+                    if variant in ITEM_DATA["Items"]
+                ]
+        return [item]
 
     @none_guard(data_source=TECH_DATA, subkey="I18n")
     @staticmethod
