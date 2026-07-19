@@ -81,6 +81,9 @@ The complete Windows pipeline is:
 .\build_executable.ps1
 ```
 
+For the exact release source, pinned dependencies, and a clean Windows build
+procedure, see the [full source and build guide](SOURCE_BUILD_GUIDE.md).
+
 It runs Python tests, Vitest, TypeScript, Vite, PyInstaller, an executable smoke
 test, ZIP packaging, and SHA-256 generation. The executable and Nexus-ready
 archive are `dist\Palworld-Save-Studio.exe` and
