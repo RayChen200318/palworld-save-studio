@@ -2,6 +2,10 @@
   <img src="frontend/public/brand/palworld-save-studio-lockup.svg" width="420" alt="Palworld Save Studio">
 </p>
 
+<p align="center">
+  <strong>English</strong> · <a href="README.zh-CN.md">简体中文</a>
+</p>
+
 # Palworld Save Studio
 
 Palworld Save Studio is a Windows save editor for Palworld 1.0. It targets
@@ -65,6 +69,14 @@ It runs Python tests, Vitest, TypeScript, Vite, PyInstaller, an executable smoke
 test, and SHA-256 generation. The executable output is
 `dist\Palworld-Save-Studio.exe`; application configuration and logs are stored
 under `%LOCALAPPDATA%\PalworldSaveStudio`.
+
+## Acknowledgements
+
+Special thanks to [KrisCris](https://github.com/KrisCris) for open-sourcing
+[Palworld-Pal-Editor](https://github.com/KrisCris/Palworld-Pal-Editor).
+Palworld Save Studio references that project and contains modified source code
+derived from it. This open-source work provided an important foundation for
+the independent editor. See [NOTICE](NOTICE) for the complete provenance.
 
 ## License and provenance
 
