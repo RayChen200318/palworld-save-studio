@@ -1,6 +1,6 @@
 const zhCN = {
   common: {
-    product: 'Palworld Save Studio', version: '0.4.0', beta: '正式版', unofficial: '非官方粉丝工具',
+    product: 'Palworld Save Studio', version: '0.4.1', beta: '正式版', unofficial: '非官方粉丝工具',
     save: '保存全部修改', saving: '正在保存', cancel: '取消', confirm: '确认', close: '关闭', back: '返回',
     loading: '正在载入', retry: '重试', search: '搜索', all: '全部', none: '无', add: '新增', edit: '编辑',
     delete: '删除', duplicate: '复制', level: '等级', owner: '持有者', location: '位置', status: '状态',
@@ -79,7 +79,7 @@ const zhCN = {
     unlocked: '格可用', unlockedSlots: '个已解锁槽位', slot: '槽位', empty: '空槽', locked: '未解锁', noDrops: '当前没有临时掉落物品',
     dragHint: '拖放可移动、交换或合并；跨容器移动可在右侧选择目标。', dropHint: '临时掉落槽只允许取回普通背包或删除。',
     selectItem: '选择一个物品', selectItemHint: '点击槽位查看数量、稀有度与动态属性。', emptySlot: '空槽位', emptySlotHint: '选择正式 Palworld 1.0 物品添加到当前槽位。',
-    quantity: '数量', rarity: '稀有度', durability: '耐久度', ammo: '弹药', eggSpecies: '蛋内帕鲁种类', eggSpeciesSearch: '搜索蛋内帕鲁名称、内部 ID 或图鉴编号', readOnlyPassives: '武器动态词条（只读）',
+    quantity: '数量', fixedQuantity: '该物品数量固定为 1', invalidQuantity: '物品数量异常', invalidQuantityHint: '帕鲁装备只能以数量 1 存在。请修正后再保存存档。', repairQuantity: '修正为 1', rarity: '稀有度', durability: '耐久度', ammo: '弹药', eggSpecies: '蛋内帕鲁种类', eggSpeciesSearch: '搜索蛋内帕鲁名称、内部 ID 或图鉴编号', readOnlyPassives: '武器动态词条（只读）',
     moveTo: '移动或交换到', chooseSlot: '选择目标槽位', move: '执行移动', retrieve: '取回普通背包', target: '目标',
     delete: '删除物品', deleteTitle: '删除此物品？', deleteCopy: '删除会进入当前内存草稿，保存全部修改后才写入存档。',
     deleteDangerTitle: '删除关键或扩容物品？', deleteDangerCopy: '此操作可能缩减可用槽位。系统会先整理受影响物品；空间不足时整项操作会被拒绝。', confirmDelete: '确认删除',
@@ -104,7 +104,7 @@ const zhCN = {
 
 const en = {
   common: {
-    product: 'Palworld Save Studio', version: '0.4.0', beta: 'Stable', unofficial: 'Unofficial fan tool',
+    product: 'Palworld Save Studio', version: '0.4.1', beta: 'Stable', unofficial: 'Unofficial fan tool',
     save: 'Save all changes', saving: 'Saving', cancel: 'Cancel', confirm: 'Confirm', close: 'Close', back: 'Back',
     loading: 'Loading', retry: 'Retry', search: 'Search', all: 'All', none: 'None', add: 'Add', edit: 'Edit',
     delete: 'Delete', duplicate: 'Duplicate', level: 'Level', owner: 'Owner', location: 'Location', status: 'Status',
@@ -183,7 +183,7 @@ const en = {
     unlocked: 'slots available', unlockedSlots: 'unlocked slots', slot: 'Slot', empty: 'Empty', locked: 'Locked', noDrops: 'No temporary dropped items',
     dragHint: 'Drag to move, swap, or merge. Use the detail panel for cross-container moves.', dropHint: 'Temporary drops can only return to the inventory or be deleted.',
     selectItem: 'Select an item', selectItemHint: 'Click a slot to inspect quantity, rarity, and dynamic properties.', emptySlot: 'Empty slot', emptySlotHint: 'Add a formal Palworld 1.0 item to this slot.',
-    quantity: 'Quantity', rarity: 'Rarity', durability: 'Durability', ammo: 'Ammunition', eggSpecies: 'Pal inside egg', eggSpeciesSearch: 'Search egg Pal name, internal ID, or Paldeck number', readOnlyPassives: 'Dynamic weapon traits (read-only)',
+    quantity: 'Quantity', fixedQuantity: 'This item always has quantity 1', invalidQuantity: 'Invalid item quantity', invalidQuantityHint: 'Pal Gear must exist with quantity 1. Repair it before saving the world.', repairQuantity: 'Set to 1', rarity: 'Rarity', durability: 'Durability', ammo: 'Ammunition', eggSpecies: 'Pal inside egg', eggSpeciesSearch: 'Search egg Pal name, internal ID, or Paldeck number', readOnlyPassives: 'Dynamic weapon traits (read-only)',
     moveTo: 'Move or swap to', chooseSlot: 'Choose target slot', move: 'Move item', retrieve: 'Return to inventory', target: 'Target',
     delete: 'Delete item', deleteTitle: 'Delete this item?', deleteCopy: 'Deletion enters the in-memory draft and reaches disk only after saving all changes.',
     deleteDangerTitle: 'Delete a key or capacity item?', deleteDangerCopy: 'This may reduce available slots. Affected items are reorganized first; the operation is rejected atomically if space is insufficient.', confirmDelete: 'Delete item',

@@ -43,6 +43,7 @@ ACCESSORY_UNLOCKS = (
     "UnlockEquipmentSlot_Accessory_02",
 )
 CAPACITY_UNLOCKS = set(COMMON_UNLOCKS + FOOD_UNLOCKS + WEAPON_UNLOCKS + ACCESSORY_UNLOCKS)
+PAL_GEAR_TYPE = "Essential_PalGear"
 
 SLOT_CUSTOM_VERSION = bytes.fromhex(
     "020000007eb4ea129a1b5aff71aa71bcdf33d60e01000000"
@@ -73,6 +74,10 @@ def _uuid_text(value: Any) -> str:
 
 def _is_zero_uuid(value: Any) -> bool:
     return _uuid_text(value) == _uuid_text(ZERO_UUID)
+
+
+def _is_pal_gear(item: dict[str, Any] | None) -> bool:
+    return bool(item and item.get("TypeB") == PAL_GEAR_TYPE)
 
 
 def _canonical(value: Any) -> Any:
@@ -320,6 +325,8 @@ class ItemInventoryService:
         flags: list[str] = []
         if catalog is None:
             flags.append("unknown-item")
+        if _is_pal_gear(catalog) and int(raw["count"]) != 1:
+            flags.append("invalid-quantity")
         if not unlocked:
             flags.append("locked-slot")
         if not self._compatible(static_id, container_name, index) and catalog is not None:
@@ -517,6 +524,8 @@ class ItemInventoryService:
             raise ItemInventoryError("Only catalogued Palworld 1.0 items can be added.")
         if not isinstance(quantity, int) or isinstance(quantity, bool):
             raise ItemInventoryError("Quantity must be an integer.")
+        if _is_pal_gear(item) and quantity != 1:
+            raise ItemInventoryError("Pal Gear quantity must be exactly 1.")
         if item.get("DynamicType"):
             if quantity != 1:
                 raise ItemInventoryError("Weapons, armor and eggs always have quantity 1.")
@@ -576,6 +585,8 @@ class ItemInventoryService:
                 if not isinstance(quantity, int) or isinstance(quantity, bool) or quantity < 1:
                     raise ItemInventoryError("Quantity must be a positive integer.")
                 if old_catalog:
+                    if _is_pal_gear(old_catalog) and quantity != 1:
+                        raise ItemInventoryError("Pal Gear quantity must be exactly 1.")
                     if quantity > int(old_catalog["MaxStack"]):
                         raise ItemInventoryError(
                             f"Quantity cannot exceed {old_catalog['MaxStack']}."

@@ -162,6 +162,28 @@ class SaveApiTests(unittest.TestCase):
         self.assertIn("incompatible", response.get_json()["msg"])
         manager.mark_dirty.assert_not_called()
 
+    def test_rejected_pal_gear_stack_does_not_mark_dirty(self) -> None:
+        manager = MagicMock()
+        manager._loaded = True
+        manager.item_inventory.add_item.side_effect = ItemInventoryError(
+            "Pal Gear quantity must be exactly 1."
+        )
+        with patch("palworld_save_studio.api.item.SaveManager", return_value=manager):
+            response = self.client.post(
+                "/api/item/player/player-1",
+                headers=self.headers,
+                json={
+                    "StaticId": "SkillUnlock_IceHorse",
+                    "Container": "essential",
+                    "Quantity": 2,
+                    "SlotIndex": 10,
+                },
+            )
+
+        self.assertEqual(response.status_code, 409)
+        self.assertIn("exactly 1", response.get_json()["msg"])
+        manager.mark_dirty.assert_not_called()
+
     def test_dangerous_item_delete_forwards_explicit_confirmation(self) -> None:
         manager = MagicMock()
         manager._loaded = True

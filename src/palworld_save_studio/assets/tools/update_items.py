@@ -172,7 +172,7 @@ def build_catalog(
             "Rank": int(source.get("rank", 0)),
             "SortId": int(source.get("sort_id", 0)),
             "MaxStack": 1
-            if static_id in UNIQUE_UNLOCK_ITEMS
+            if static_id in UNIQUE_UNLOCK_ITEMS or source.get("type_b") == "Essential_PalGear"
             else max(1, int(source.get("max_stack_count", 1))),
             "DynamicType": dynamic.get("type"),
             "MaxDurability": float(dynamic.get("durability", 0)),

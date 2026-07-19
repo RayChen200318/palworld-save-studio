@@ -33,12 +33,14 @@ describe('PalsView species selection', () => {
         plugins: [pinia, router],
         stubs: {
           AppShell: { template: '<main><slot /></main>' }, AppIcon: { template: '<i />' }, StatusPill: { template: '<span><slot /></span>' }, VirtualPalGrid: { template: '<div />' },
-          ModalDialog: { props: ['open', 'title'], template: '<section v-if="open"><slot /><slot name="footer" /></section>' },
+          ModalDialog: { props: ['open', 'title', 'width'], template: '<section v-if="open" :data-width="width"><slot /><slot name="footer" /></section>' },
         },
       },
     })
     await flushPromises()
     await wrapper.findAll('button').find((button) => button.text().includes('新增对象'))!.trigger('click')
+    expect(wrapper.find('section[data-width="900px"]').exists()).toBe(true)
+    expect(wrapper.get('.searchable-select').classes()).toContain('inline-grid')
     await wrapper.get('.select-trigger').trigger('click')
     await wrapper.get('.select-search input').setValue('204')
     expect(wrapper.findAll('.select-results button')).toHaveLength(1)

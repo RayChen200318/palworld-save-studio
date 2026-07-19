@@ -17,10 +17,10 @@ const options = [
   },
 ]
 
-function mountPicker(modelValue = 'Anubis') {
+function mountPicker(modelValue = 'Anubis', mode?: 'popover' | 'inline-grid') {
   return mount(SearchableSelect, {
     props: {
-      modelValue, options, placeholder: '选择物种', searchPlaceholder: '搜索物种', emptyText: '没有结果',
+      modelValue, options, placeholder: '选择物种', searchPlaceholder: '搜索物种', emptyText: '没有结果', mode,
     },
     global: { stubs: { AppIcon: { template: '<i />' } } },
   })
@@ -64,5 +64,20 @@ describe('SearchableSelect', () => {
     await wrapper.get('.select-trigger').trigger('click')
     await wrapper.get('input').setValue('not-a-species')
     expect(wrapper.text()).toContain('没有结果')
+  })
+
+  it('uses two-column keyboard navigation in inline grid mode', async () => {
+    const wrapper = mountPicker('Anubis', 'inline-grid')
+    expect(wrapper.classes()).toContain('inline-grid')
+    await wrapper.get('.select-trigger').trigger('click')
+    const input = wrapper.get('input')
+    await input.trigger('keydown', { key: 'ArrowDown' })
+    await input.trigger('keydown', { key: 'Enter' })
+    expect(wrapper.emitted('update:modelValue')?.[0]).toEqual(['Hunter_Rifle'])
+
+    await wrapper.get('.select-trigger').trigger('click')
+    await wrapper.get('input').trigger('keydown', { key: 'ArrowRight' })
+    await wrapper.get('input').trigger('keydown', { key: 'Enter' })
+    expect(wrapper.emitted('update:modelValue')?.[1]).toEqual(['WorldTreeDragon'])
   })
 })

@@ -17,7 +17,7 @@ class ReleaseMetadataTests(unittest.TestCase):
         with (ROOT / "frontend" / "package.json").open(encoding="utf-8") as file:
             frontend_version = json.load(file)["version"]
 
-        self.assertEqual(VERSION, "0.4.0")
+        self.assertEqual(VERSION, "0.4.1")
         self.assertEqual(project_version, VERSION)
         self.assertEqual(frontend_version, VERSION)
 

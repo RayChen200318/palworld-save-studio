@@ -20,13 +20,14 @@ const item = (overrides: Partial<ItemSlotItem> = {}): ItemSlotItem => ({
 function inventory(playerId = 'p1'): PlayerInventory {
   const names: ItemContainerName[] = ['common', 'essential', 'food', 'weapon', 'armor', 'drop']
   const containers = Object.fromEntries(names.map((name) => {
-    const slots = name === 'common'
-      ? [
+    const slots = name === 'common' ? [
           { Container: name, SlotIndex: 0, SlotType: null, Unlocked: true, Item: item() },
           { Container: name, SlotIndex: 1, SlotType: null, Unlocked: true, Item: null },
           { Container: name, SlotIndex: 2, SlotType: null, Unlocked: true, Item: item({ StaticId: 'Mod_Item', I18n: { en: 'Mod_Item', 'zh-CN': 'Mod_Item' }, IconKey: null, Category: 'unknown', MaxStack: null, StateFlags: ['unknown-item'] }) },
-        ]
-      : []
+        ] : name === 'essential' ? [
+          { Container: name, SlotIndex: 0, SlotType: null, Unlocked: true, Item: item({ StaticId: 'SkillUnlock_IceHorse', I18n: { en: 'Frostallion Saddle', 'zh-CN': '唤冬兽的鞍具' }, IconKey: 'saddle', Category: 'key', Quantity: 3, MaxStack: 1, StateFlags: ['invalid-quantity'] }) },
+          { Container: name, SlotIndex: 1, SlotType: null, Unlocked: true, Item: null },
+        ] : []
     return [name, {
       ContainerId: name, Capacity: slots.length, PhysicalCapacity: slots.length,
       UnlockedIndices: slots.map((slot) => slot.SlotIndex), Slots: slots, ReadOnlyTarget: name === 'drop',
@@ -49,6 +50,12 @@ const catalog: ItemCatalog = {
       TypeA: 'Consume', TypeB: 'PalEgg', EquipSlot: null, AllowedContainers: ['common'],
       Rarity: 0, Rank: 1, SortId: 2, MaxStack: 1, DynamicType: 'egg', MaxDurability: 0,
       MagazineSize: 0, IconKey: 'egg_dark',
+    },
+    SkillUnlock_IceHorse: {
+      StaticId: 'SkillUnlock_IceHorse', BaseKey: 'Frostallion_Saddle', I18n: { en: 'Frostallion Saddle', 'zh-CN': '唤冬兽的鞍具' }, Category: 'key',
+      TypeA: 'Essential', TypeB: 'Essential_PalGear', EquipSlot: null, AllowedContainers: ['essential'],
+      Rarity: 4, Rank: 0, SortId: 3, MaxStack: 1, DynamicType: null, MaxDurability: 0,
+      MagazineSize: 0, IconKey: 'saddle',
     },
   },
   Groups: [], EggSpecies: [
@@ -147,6 +154,25 @@ describe('ItemsView', () => {
 
     expect(loadSpy).toHaveBeenCalledWith('p2')
     expect(useItemsStore().selectedPlayerId).toBe('p2')
+  })
+
+  it('labels and repairs an existing invalid Pal Gear quantity', async () => {
+    const { wrapper, store } = await mountView()
+    store.selectContainer('essential')
+    store.selectSlot(0)
+    await wrapper.vm.$nextTick()
+    const repaired = inventory()
+    const repairedItem = repaired.Containers.essential.Slots[0].Item!
+    repairedItem.Quantity = 1
+    repairedItem.StateFlags = []
+    const patchSpy = vi.spyOn(apiClient, 'patchItem').mockResolvedValue({ Inventory: repaired, DirtyRevision: 4 })
+
+    expect(wrapper.text()).toContain('物品数量异常')
+    await wrapper.get('.repair-card button').trigger('click')
+    await flushPromises()
+
+    expect(patchSpy).toHaveBeenCalledWith('p1', 'essential', 0, { Quantity: 1 })
+    expect(useSessionStore().session.DirtyRevision).toBe(4)
   })
 
   it('searches legal egg species by bilingual name and Paldeck number', async () => {

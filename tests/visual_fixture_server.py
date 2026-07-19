@@ -227,7 +227,7 @@ def session():
 
 
 @app.route("/api/save/fetch_config")
-def config(): return ok({"I18n": "zh-CN", "I18nList": {"zh-CN": "简体中文", "en": "English"}, "Path": session()["Path"], "HasPassword": False, "VERSION": "0.4.0", "IsOfficialBuild": False, "BackupEnabled": True})
+def config(): return ok({"I18n": "zh-CN", "I18nList": {"zh-CN": "简体中文", "en": "English"}, "Path": session()["Path"], "HasPassword": False, "VERSION": "0.4.1", "IsOfficialBuild": False, "BackupEnabled": True})
 
 
 @app.route("/api/auth/login", methods=["POST"])

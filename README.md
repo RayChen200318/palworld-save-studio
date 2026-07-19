@@ -37,6 +37,8 @@ Windows 10/11 x64 and supports Steam and dedicated-server saves.
   no external network requests.
 - Version `0.4.0` adds searchable species selectors, level-10 work suitability,
   bilingual skill details, and a verified mutation-exclusive trait category.
+- Version `0.4.1` enlarges the create-Pal species picker and prevents Pal Gear
+  key items from being written with invalid stacked quantities.
 - Keep all changes in one in-memory draft and save them to the currently opened
   world in one operation.
 
@@ -50,7 +52,7 @@ Windows 10/11 x64 and supports Steam and dedicated-server saves.
 
 ## Supported scope
 
-Version `0.4.0` supports the Windows GUI, Palworld 1.0 data, Steam saves, and
+Version `0.4.1` supports the Windows GUI, Palworld 1.0 data, Steam saves, and
 dedicated-server saves. Item management is currently validated with a Steam
 save only; it does not claim dedicated-server item validation. Item management
 excludes base storage, world containers,

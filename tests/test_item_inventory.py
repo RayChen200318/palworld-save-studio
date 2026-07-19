@@ -96,6 +96,16 @@ class ItemCatalogTests(unittest.TestCase):
             [f"HandGun_Default{suffix}" for suffix in ("", "_2", "_3", "_4", "_5")],
         )
 
+    def test_every_pal_gear_item_has_a_single_item_stack(self) -> None:
+        data = DataProvider.get_item_catalog()
+        pal_gear = [
+            item for item in data["Items"].values()
+            if item.get("TypeB") == "Essential_PalGear"
+        ]
+        self.assertGreater(len(pal_gear), 100)
+        self.assertTrue(all(item["MaxStack"] == 1 for item in pal_gear))
+        self.assertEqual(data["Items"]["SkillUnlock_IceHorse"]["MaxStack"], 1)
+
 
 class ItemInventoryTests(unittest.TestCase):
     def setUp(self) -> None:
@@ -118,6 +128,39 @@ class ItemInventoryTests(unittest.TestCase):
 
         self.assertEqual(slots[0]["Item"]["Quantity"], 9999)
         self.assertEqual(slots[1]["Item"]["Quantity"], 1001)
+
+    def test_pal_gear_requires_quantity_one_but_allows_duplicate_slots(self) -> None:
+        with self.assertRaisesRegex(ItemInventoryError, "exactly 1"):
+            self.service.add_item(
+                "player-1", "SkillUnlock_IceHorse", "essential", 2, 0
+            )
+        self.assertEqual(
+            self.service.player_inventory("player-1")["Containers"]["essential"]["Slots"][0]["Item"],
+            None,
+        )
+
+        self.service.add_item(
+            "player-1", "SkillUnlock_IceHorse", "essential", 1, 0
+        )
+        result = self.service.add_item(
+            "player-1", "SkillUnlock_IceHorse", "essential", 1, 1
+        )
+        self.assertEqual(result["Containers"]["essential"]["Slots"][0]["Item"]["Quantity"], 1)
+        self.assertEqual(result["Containers"]["essential"]["Slots"][1]["Item"]["Quantity"], 1)
+
+    def test_invalid_existing_pal_gear_quantity_is_flagged_and_repairable(self) -> None:
+        self._append("essential", 0, "SkillUnlock_IceHorse", 3)
+        item = self.service.player_inventory("player-1")["Containers"]["essential"]["Slots"][0]["Item"]
+        self.assertIn("invalid-quantity", item["StateFlags"])
+
+        with self.assertRaisesRegex(ItemInventoryError, "exactly 1"):
+            self.service.patch_item("player-1", "essential", 0, {"Quantity": 2})
+        result = self.service.patch_item(
+            "player-1", "essential", 0, {"Quantity": 1}
+        )
+        repaired = result["Containers"]["essential"]["Slots"][0]["Item"]
+        self.assertEqual(repaired["Quantity"], 1)
+        self.assertNotIn("invalid-quantity", repaired["StateFlags"])
 
     def test_incompatible_move_is_atomic(self) -> None:
         self.service.add_item("player-1", "Wood", "common", 10, 0)
