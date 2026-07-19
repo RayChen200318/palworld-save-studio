@@ -12,7 +12,7 @@ keywords = ["palworld", "save-editor", "windows", "pal"]
 license = {file = "LICENSE"}
 requires-python = ">=3.11"
 readme = "README.md"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
     "setuptools==80.9.0",
     "palworld-save-tools @ git+https://github.com/oMaN-Rod/palworld-save-tools.git@790e0bcf7bacef47b048e110066617a8fbb40041",
@@ -22,8 +22,7 @@ dependencies = [
     "waitress==3.0.2",
     "Flask-JWT-Extended==4.7.1",
     "pywebview==4.4.1",
-    "requests==2.32.5",
-    "aiohttp==3.13.2"
+    "requests==2.32.5"
 ]
 classifiers = [
     "Programming Language :: Python :: 3",

@@ -1,6 +1,4 @@
 from pathlib import Path
-import threading
-import webbrowser
 from flask import Flask, send_from_directory
 from flask_jwt_extended import JWTManager
 from werkzeug.security import generate_password_hash
@@ -26,6 +24,7 @@ app.register_blueprint(item_blueprint, url_prefix='/api/item')
 
 app.config['JWT_SECRET_KEY'] = Config.JWT_SECRET_KEY
 jwt = JWTManager(app)
+SERVER_HOST = "127.0.0.1"
 
 
 @app.route('/image/<icon_type>/<filename>')
@@ -77,15 +76,9 @@ def missing_token_callback(error_string):
 
 def main():
     Config._password_hash = generate_password_hash(Config.password or "")
-    if Config.mode == "web" and not Config.debug:
-        try:
-            threading.Timer(1, lambda: webbrowser.open(f"http://127.0.0.1:{Config.port}") ).start()
-        except:
-            LOGGER.info("Failed to launch browser.")
-    host = '0.0.0.0' if Config.mode == "web" else "127.0.0.1"
     if Config.debug:
-        app.run(use_reloader=True, port=Config.port, threaded=True)
+        app.run(host=SERVER_HOST, use_reloader=True, port=Config.port, threaded=True)
     else:
         from waitress import serve
-        LOGGER.info(f"LISTENING ON {host}:{Config.port}.")
-        serve(app, host=host, port=Config.port, threads=12)
+        LOGGER.info(f"LISTENING ON {SERVER_HOST}:{Config.port}.")
+        serve(app, host=SERVER_HOST, port=Config.port, threads=12)

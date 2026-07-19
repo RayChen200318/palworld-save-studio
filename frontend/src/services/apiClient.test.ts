@@ -41,20 +41,6 @@ describe('ApiClient', () => {
     })
   })
 
-  it('requests update metadata without starting a download', async () => {
-    const fetcher = vi.fn().mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: async () => ({
-        status: 0,
-        data: { CurrentVersion: '0.3.0', LatestVersion: null, UpdateAvailable: false, ReleaseUrl: null },
-      }),
-    })
-    const result = await new ApiClient('/api', fetcher).getUpdateStatus()
-    expect(result.UpdateAvailable).toBe(false)
-    expect(fetcher).toHaveBeenCalledWith('/api/save/update', expect.any(Object))
-  })
-
   it('sends item moves through the typed player-scoped endpoint', async () => {
     const fetcher = vi.fn().mockResolvedValue({
       ok: true,

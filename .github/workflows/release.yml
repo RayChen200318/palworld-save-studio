@@ -34,6 +34,8 @@ jobs:
           gh release create $env:GITHUB_REF_NAME
           .\dist\Palworld-Save-Studio.exe
           .\dist\Palworld-Save-Studio.exe.sha256
+          .\dist\Palworld-Save-Studio-Windows-x64.zip
+          .\dist\Palworld-Save-Studio-Windows-x64.zip.sha256
           --verify-tag
           --generate-notes
           --title "Palworld Save Studio $env:GITHUB_REF_NAME"

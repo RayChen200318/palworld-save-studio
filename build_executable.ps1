@@ -84,7 +84,8 @@ if (Test-Path '.\dist') { Remove-Item '.\dist' -Recurse -Force }
     --clean `
     --onefile `
     --icon '.\icon.ico' `
-    --add-data 'src/palworld_save_studio/assets;assets' `
+    --add-data 'src/palworld_save_studio/assets/data;assets/data' `
+    --add-data 'src/palworld_save_studio/assets/icons;assets/icons' `
     --add-data 'src/palworld_save_studio/webui;webui' `
     --hidden-import 'ooz' `
     --paths '.\src' `
@@ -101,5 +102,24 @@ Assert-NativeSuccess 'Windows executable smoke test'
 
 $Hash = (Get-FileHash -Algorithm SHA256 $Executable).Hash.ToLowerInvariant()
 Set-Content -Path '.\dist\Palworld-Save-Studio.exe.sha256' -Value "$Hash  Palworld-Save-Studio.exe" -Encoding ascii
+
+$ArchiveRoot = '.\dist\Palworld-Save-Studio-Windows-x64'
+$Archive = '.\dist\Palworld-Save-Studio-Windows-x64.zip'
+New-Item -Path $ArchiveRoot -ItemType Directory | Out-Null
+Copy-Item -Path @(
+    $Executable,
+    '.\dist\Palworld-Save-Studio.exe.sha256',
+    '.\README.md',
+    '.\README.zh-CN.md',
+    '.\LICENSE',
+    '.\NOTICE'
+) -Destination $ArchiveRoot
+Compress-Archive -Path "$ArchiveRoot\*" -DestinationPath $Archive -CompressionLevel Optimal
+Remove-Item $ArchiveRoot -Recurse -Force
+
+$ArchiveHash = (Get-FileHash -Algorithm SHA256 $Archive).Hash.ToLowerInvariant()
+Set-Content -Path "$Archive.sha256" -Value "$ArchiveHash  Palworld-Save-Studio-Windows-x64.zip" -Encoding ascii
 Write-Host "Built $Executable"
 Write-Host "SHA-256: $Hash"
+Write-Host "Packaged $Archive"
+Write-Host "Archive SHA-256: $ArchiveHash"

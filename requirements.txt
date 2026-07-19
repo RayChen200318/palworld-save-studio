@@ -7,4 +7,3 @@ waitress==3.0.2
 Flask-JWT-Extended==4.7.1
 pywebview==4.4.1
 requests==2.32.5
-aiohttp==3.13.2

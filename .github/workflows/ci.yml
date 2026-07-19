@@ -32,4 +32,6 @@ jobs:
           path: |
             dist/Palworld-Save-Studio.exe
             dist/Palworld-Save-Studio.exe.sha256
+            dist/Palworld-Save-Studio-Windows-x64.zip
+            dist/Palworld-Save-Studio-Windows-x64.zip.sha256
           if-no-files-found: error

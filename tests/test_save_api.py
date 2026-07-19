@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 from flask_jwt_extended import create_access_token
 
@@ -75,21 +75,9 @@ class SaveApiTests(unittest.TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.get_json()["status"], 1)
 
-    def test_update_check_reads_the_new_repository_release_status(self) -> None:
-        result = {
-            "CurrentVersion": "0.3.0",
-            "LatestVersion": None,
-            "UpdateAvailable": False,
-            "ReleaseUrl": None,
-        }
-        with patch(
-            "palworld_save_studio.api.save.get_release_status",
-            new=AsyncMock(return_value=result),
-        ):
-            response = self.client.get("/api/save/update", headers=self.headers)
-
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.get_json()["data"], result)
+    def test_update_check_route_is_not_registered(self) -> None:
+        routes = {rule.rule for rule in app.url_map.iter_rules()}
+        self.assertNotIn("/api/save/update", routes)
 
     def test_technology_catalog_uses_string_labels(self) -> None:
         response = self.client.get("/api/save/tech_data", headers=self.headers)

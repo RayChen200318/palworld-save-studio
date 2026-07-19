@@ -24,6 +24,8 @@ Palworld Save Studio 是一款适用于《幻兽帕鲁》1.0 的 Windows 存档�
 - 管理玩家背包、关键物品、食物袋、武器、装备、临时掉落物、耐久度、
   弹药、稀有度和蛋类物品。
 - `0.3.0` 版本引入原创 Save Studio 品牌、舒适字号、紧凑布局和统一的编辑界面。
+- `0.3.1` 版本移除版本检查与远程 WebUI 模式。发布版仅在 `127.0.0.1`
+  上提供桌面界面所需的本地服务，不发起任何外部网络请求。
 - 所有修改先保存在同一份内存草稿中，确认后一次写回当前打开的世界存档。
 
 ## 界面
@@ -36,12 +38,12 @@ Palworld Save Studio 是一款适用于《幻兽帕鲁》1.0 的 Windows 存档�
 
 ## 支持范围
 
-`0.3.0` 版本支持 Windows 图形界面、《幻兽帕鲁》1.0 数据、Steam 存档和
+`0.3.1` 版本支持 Windows 图形界面、《幻兽帕鲁》1.0 数据、Steam 存档和
 专用服务器存档。物品管理目前仅使用 Steam 存档完成验证，因此不宣称已经
 验证专用服务器存档中的物品编辑。物品管理不包括基地仓库、世界容器、
 跨玩家转移、虚拟进度记录或超范围数值。本程序也不支持 Xbox/Game Pass、
-原始 JSON 编辑、另存为、批量字段编辑、多级撤销、安装程序、自动更新、
-遥测、浅色主题或其他桌面平台。
+原始 JSON 编辑、另存为、批量字段编辑、多级撤销、安装程序、版本检查、
+遥测、外部网络访问、远程 WebUI 模式、浅色主题或其他桌面平台。
 
 ## 开发
 
@@ -61,8 +63,9 @@ corepack pnpm build
 ```
 
 该流程会依次运行 Python 测试、Vitest、TypeScript、Vite、PyInstaller、
-可执行文件启动检查和 SHA-256 生成。生成的可执行文件位于
-`dist\Palworld-Save-Studio.exe`；应用配置和日志保存在
+可执行文件启动检查、ZIP 打包和 SHA-256 生成。生成的可执行文件与适合
+Nexus 上传的归档分别位于 `dist\Palworld-Save-Studio.exe` 和
+`dist\Palworld-Save-Studio-Windows-x64.zip`；应用配置和日志保存在
 `%LOCALAPPDATA%\PalworldSaveStudio`。
 
 ## 致谢
