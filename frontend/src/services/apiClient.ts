@@ -15,7 +15,6 @@ import type {
   SaveConfig,
   SaveSession,
   TechnologyItem,
-  UpdateStatus,
 } from '@/types/domain'
 
 export interface ApiEnvelope<T> {
@@ -98,10 +97,6 @@ export class ApiClient {
       method: 'PATCH',
       body: JSON.stringify({ BackupEnabled: enabled }),
     })
-  }
-
-  getUpdateStatus(): Promise<UpdateStatus> {
-    return this.request('/save/update')
   }
 
   updateLocale(locale: string): Promise<void> {

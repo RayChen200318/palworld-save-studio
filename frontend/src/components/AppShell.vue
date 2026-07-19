@@ -7,7 +7,6 @@ import LanguageToggle from './LanguageToggle.vue'
 import ModalDialog from './ModalDialog.vue'
 import StatusPill from './StatusPill.vue'
 import { messages } from '@/i18n/messages'
-import { apiClient } from '@/services/apiClient'
 import { useCollectionStore } from '@/stores/collection'
 import { useDraftStore } from '@/stores/draft'
 import { useSessionStore } from '@/stores/session'
@@ -27,18 +26,8 @@ const settingsOpen = ref(false)
 const disableBackupOpen = ref(false)
 const saveOpen = ref(false)
 const changeOpen = ref(false)
-const updateState = ref<'idle' | 'checking' | 'current' | 'available' | 'none' | 'failed'>('idle')
-const latestVersion = ref('')
 const active = computed(() => String(route.name || '').split('-')[0])
 const searchVisible = computed(() => active.value === 'pals')
-const updateLabel = computed(() => {
-  if (updateState.value === 'checking') return copy.value.settings.checking
-  if (updateState.value === 'current') return copy.value.settings.current
-  if (updateState.value === 'available') return `${copy.value.settings.available} ${latestVersion.value}`
-  if (updateState.value === 'none') return copy.value.settings.noRelease
-  if (updateState.value === 'failed') return copy.value.settings.updateFailed
-  return copy.value.settings.check
-})
 
 function requestChangeSave() {
   if (session.dirty) changeOpen.value = true
@@ -69,19 +58,6 @@ async function toggleBackup() {
 async function disableBackup() {
   await session.setBackupEnabled(false)
   disableBackupOpen.value = false
-}
-
-async function checkUpdate() {
-  updateState.value = 'checking'
-  try {
-    const result = await apiClient.getUpdateStatus()
-    latestVersion.value = result.LatestVersion || ''
-    updateState.value = !result.LatestVersion
-      ? 'none'
-      : result.UpdateAvailable ? 'available' : 'current'
-  } catch {
-    updateState.value = 'failed'
-  }
 }
 </script>
 
@@ -141,7 +117,6 @@ async function checkUpdate() {
       <div class="about-hero"><img :src="brandLogoUrl" alt="" /><div><strong>Palworld Save Studio</strong><StatusPill tone="cyan">{{ copy.common.beta }}</StatusPill></div></div>
       <div class="setting-row"><div><strong>{{ copy.settings.language }}</strong><p>简体中文 / English</p></div><LanguageToggle /></div>
       <div class="setting-row"><div><strong>{{ copy.settings.backup }}</strong><p>{{ copy.settings.backupHint }}</p></div><button class="toggle" :class="{ enabled: session.session.BackupEnabled }" type="button" :aria-pressed="session.session.BackupEnabled" @click="toggleBackup"><span /></button></div>
-      <div class="setting-row"><div><strong>{{ copy.settings.update }}</strong><p>{{ copy.settings.updateHint }}</p></div><button class="button secondary compact-button" type="button" :disabled="updateState === 'checking'" @click="checkUpdate">{{ updateLabel }}</button></div>
       <div class="legal-block"><div><span>{{ copy.settings.maintainer }}</span><strong>{{ copy.settings.maintainerName }}</strong></div><h3>{{ copy.settings.license }}</h3><p>{{ copy.settings.legal }}</p><p>{{ copy.settings.disclaimer }}</p></div>
       <template #footer><button class="button primary" type="button" @click="settingsOpen = false">{{ copy.common.close }}</button></template>
     </ModalDialog>
@@ -163,7 +138,7 @@ async function checkUpdate() {
 .world-card{margin-top:20px;padding:13px;border:1px solid var(--border-subtle);border-radius:12px;background:linear-gradient(145deg,rgba(20,30,48,.82),rgba(13,20,34,.68));box-shadow:0 12px 30px rgba(0,0,0,.16)}.world-heading{display:flex;align-items:center;justify-content:space-between;color:var(--text-faint);font-size:12px;font-weight:650}.world-heading :deep(.status-pill){min-height:24px;padding:2px 7px;font-size:12px}.world-card>strong{display:block;margin:11px 0 6px;color:var(--text-strong);font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.world-source{display:flex;align-items:center;gap:6px;color:var(--text-muted);font-size:12px}.change-save{width:100%;display:flex;justify-content:space-between;align-items:center;margin-top:11px;padding:10px 0 0;border:0;border-top:1px solid var(--border-subtle);background:transparent;color:var(--cyan-300);font-size:12px;font-weight:700;cursor:pointer}
 .sidebar-bottom{margin-top:auto}.settings-button{margin-bottom:10px}.build-info{display:grid;gap:2px;padding:0 7px;color:var(--text-faint);font-size:12px}
 .workspace{min-width:0;min-height:100vh}.topbar{height:68px;padding:0 24px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border-subtle);background:rgba(8,11,20,.76);backdrop-filter:blur(var(--glass-blur));position:sticky;top:0;z-index:30}.page-heading span{display:block;margin-bottom:1px;color:var(--cyan-300);font-size:12px;font-weight:750;letter-spacing:.07em}.page-heading h1{margin:0;color:var(--text-strong);font-size:28px;font-weight:720;line-height:1.1;letter-spacing:-.03em}.topbar-actions{display:flex;align-items:center;gap:8px}.search-box{width:260px;height:40px;display:flex;align-items:center;gap:9px;padding:0 12px;border:1px solid var(--border-subtle);border-radius:10px;background:rgba(20,30,48,.66);color:var(--text-faint)}.search-box:focus-within{border-color:var(--border-bright);color:var(--cyan-300)}.search-box input{width:100%;border:0;outline:0;background:transparent;color:var(--text);font:inherit;font-size:14px}.search-box input::placeholder{color:var(--text-faint)}.save-button:disabled,.button:disabled{opacity:.42;cursor:not-allowed;transform:none}.avatar{width:38px;height:38px;display:grid;place-items:center;border:1px solid rgba(139,124,255,.34);border-radius:10px;background:linear-gradient(145deg,rgba(139,124,255,.24),rgba(53,230,209,.08));color:var(--violet-200);font-size:12px;font-weight:800}.page-content{width:100%;max-width:1720px;margin:0 auto;padding:24px 24px 32px}
-.about-hero{display:flex;align-items:center;gap:16px;padding-bottom:18px}.about-hero img{width:64px;height:64px}.about-hero>div{display:flex;flex-direction:column;align-items:flex-start;gap:8px}.about-hero strong{color:var(--text-strong);font-size:18px}.setting-row{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:16px 0;border-top:1px solid var(--border-subtle)}.setting-row strong{color:var(--text-strong);font-size:15px}.setting-row p,.legal-block p{margin:4px 0 0;color:var(--text-muted);font-size:13px;line-height:1.6}.compact-button{font-size:12px;white-space:nowrap}.legal-block{margin-top:8px;padding:16px;border:1px solid var(--border-subtle);border-radius:12px;background:var(--surface-soft)}.legal-block>div{display:flex;justify-content:space-between;color:var(--text-muted);font-size:13px}.legal-block>div strong{color:var(--cyan-300)}.legal-block h3{margin:16px 0 0;color:var(--text-strong);font-size:15px}.toggle{width:46px;height:26px;padding:2px;border:1px solid var(--border-subtle);border-radius:99px;background:#121a2a;cursor:pointer}.toggle span{display:block;width:20px;height:20px;border-radius:50%;background:var(--text-faint);transition:transform 160ms ease,background 160ms ease}.toggle.enabled{border-color:rgba(53,230,209,.35);background:rgba(53,230,209,.15)}.toggle.enabled span{transform:translateX(19px);background:var(--cyan-300)}.dialog-copy{margin:0 0 16px;color:var(--text-muted);font-size:14px;line-height:1.7}.path-confirm{padding:13px 14px;border:1px solid var(--border-subtle);border-radius:10px;background:rgba(5,9,17,.56)}.path-confirm span{display:block;margin-bottom:6px;color:var(--text-faint);font-size:12px;font-weight:700}.path-confirm code{display:block;overflow:hidden;color:var(--text-muted);font-size:11px;white-space:nowrap;text-overflow:ellipsis}.error-copy{color:var(--red-300);font-size:13px}
+.about-hero{display:flex;align-items:center;gap:16px;padding-bottom:18px}.about-hero img{width:64px;height:64px}.about-hero>div{display:flex;flex-direction:column;align-items:flex-start;gap:8px}.about-hero strong{color:var(--text-strong);font-size:18px}.setting-row{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:16px 0;border-top:1px solid var(--border-subtle)}.setting-row strong{color:var(--text-strong);font-size:15px}.setting-row p,.legal-block p{margin:4px 0 0;color:var(--text-muted);font-size:13px;line-height:1.6}.legal-block{margin-top:8px;padding:16px;border:1px solid var(--border-subtle);border-radius:12px;background:var(--surface-soft)}.legal-block>div{display:flex;justify-content:space-between;color:var(--text-muted);font-size:13px}.legal-block>div strong{color:var(--cyan-300)}.legal-block h3{margin:16px 0 0;color:var(--text-strong);font-size:15px}.toggle{width:46px;height:26px;padding:2px;border:1px solid var(--border-subtle);border-radius:99px;background:#121a2a;cursor:pointer}.toggle span{display:block;width:20px;height:20px;border-radius:50%;background:var(--text-faint);transition:transform 160ms ease,background 160ms ease}.toggle.enabled{border-color:rgba(53,230,209,.35);background:rgba(53,230,209,.15)}.toggle.enabled span{transform:translateX(19px);background:var(--cyan-300)}.dialog-copy{margin:0 0 16px;color:var(--text-muted);font-size:14px;line-height:1.7}.path-confirm{padding:13px 14px;border:1px solid var(--border-subtle);border-radius:10px;background:rgba(5,9,17,.56)}.path-confirm span{display:block;margin-bottom:6px;color:var(--text-faint);font-size:12px;font-weight:700}.path-confirm code{display:block;overflow:hidden;color:var(--text-muted);font-size:11px;white-space:nowrap;text-overflow:ellipsis}.error-copy{color:var(--red-300);font-size:13px}
 @media(max-width:1366px){.app-frame{grid-template-columns:200px minmax(0,1fr)}.sidebar{padding-left:12px;padding-right:12px}.page-content{padding:20px 20px 28px}.topbar{padding:0 20px}.search-box{width:205px}.topbar-actions :deep(.status-pill){display:none}}
 @media(max-width:1180px){.search-box{display:none}.save-button{padding:0 11px}.save-button .app-icon{display:none}}
 </style>

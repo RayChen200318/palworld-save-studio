@@ -1,6 +1,6 @@
 const zhCN = {
   common: {
-    product: 'Palworld Save Studio', version: '0.3.0', beta: '正式版', unofficial: '非官方粉丝工具',
+    product: 'Palworld Save Studio', version: '0.3.1', beta: '正式版', unofficial: '非官方粉丝工具',
     save: '保存全部修改', saving: '正在保存', cancel: '取消', confirm: '确认', close: '关闭', back: '返回',
     loading: '正在载入', retry: '重试', search: '搜索', all: '全部', none: '无', add: '新增', edit: '编辑',
     delete: '删除', duplicate: '复制', level: '等级', owner: '持有者', location: '位置', status: '状态',
@@ -83,8 +83,7 @@ const zhCN = {
     rarities: { 0: '普通', 1: '罕见', 2: '稀有', 3: '史诗', 4: '传说', 5: '特殊' },
   },
   settings: {
-    title: '设置与关于', language: '界面语言', update: '更新检查', updateHint: '仅读取新仓库最新 Release 信息，不自动下载。',
-    check: '检查更新', checking: '正在检查', current: '当前已是最新版本', available: '发现版本', noRelease: '尚无公开版本', updateFailed: '检查失败', backup: '持久备份', backupHint: '保存前在 Palworld-Save-Studio-Backup 中保留一份存档副本。',
+    title: '设置与关于', language: '界面语言', backup: '持久备份', backupHint: '保存前在 Palworld-Save-Studio-Backup 中保留一份存档副本。',
     disableBackup: '关闭持久备份？', disableBackupCopy: '关闭后，后续保存不再创建持久副本。临时事务校验不受影响。',
     disable: '确认关闭', license: '许可证与来源', legal: 'GPL-3.0 开源软件。来源与导入基线记录见 NOTICE。',
     disclaimer: '非官方粉丝工具，与 Pocketpair, Inc. 无关联。软件不提供任何担保。', maintainer: '维护者', maintainerName: 'RayChen200318',
@@ -100,7 +99,7 @@ const zhCN = {
 
 const en = {
   common: {
-    product: 'Palworld Save Studio', version: '0.3.0', beta: 'Stable', unofficial: 'Unofficial fan tool',
+    product: 'Palworld Save Studio', version: '0.3.1', beta: 'Stable', unofficial: 'Unofficial fan tool',
     save: 'Save all changes', saving: 'Saving', cancel: 'Cancel', confirm: 'Confirm', close: 'Close', back: 'Back',
     loading: 'Loading', retry: 'Retry', search: 'Search', all: 'All', none: 'None', add: 'Add', edit: 'Edit',
     delete: 'Delete', duplicate: 'Duplicate', level: 'Level', owner: 'Owner', location: 'Location', status: 'Status',
@@ -183,8 +182,7 @@ const en = {
     rarities: { 0: 'Common', 1: 'Uncommon', 2: 'Rare', 3: 'Epic', 4: 'Legendary', 5: 'Special' },
   },
   settings: {
-    title: 'Settings & About', language: 'Interface language', update: 'Update check', updateHint: 'Reads the latest Release metadata from the new repository and never downloads automatically.',
-    check: 'Check for updates', checking: 'Checking', current: 'This version is current', available: 'Version found', noRelease: 'No public release yet', updateFailed: 'Check failed', backup: 'Persistent backup', backupHint: 'Keep a save copy in Palworld-Save-Studio-Backup before committing.',
+    title: 'Settings & About', language: 'Interface language', backup: 'Persistent backup', backupHint: 'Keep a save copy in Palworld-Save-Studio-Backup before committing.',
     disableBackup: 'Disable persistent backups?', disableBackupCopy: 'Future saves will stop creating persistent copies. Temporary transaction validation remains enabled.',
     disable: 'Disable', license: 'License & provenance', legal: 'GPL-3.0 software. See NOTICE for provenance and import baselines.',
     disclaimer: 'Unofficial fan tool, not affiliated with Pocketpair, Inc. The software is provided without warranty.', maintainer: 'Maintainer', maintainerName: 'RayChen200318',

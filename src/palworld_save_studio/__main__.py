@@ -6,7 +6,6 @@ from palworld_save_studio.config import APP_DATA_PATH, Config, version_info, is_
 
 from palworld_save_studio.cli import InteractThread, main as cli_main
 from palworld_save_studio.gui import main as gui_main
-from palworld_save_studio.webui import main as webui_main
 
 
 def setup_config_from_args():
@@ -19,12 +18,12 @@ def setup_config_from_args():
 
     parser.add_argument('--lang', type=str, help=f'Language for the application. options: {", ".join(DataProvider.get_i18n_options())}', default=Config.i18n)
     parser.add_argument('--path', type=str, help='Path to the save folder.', default=Config.path)
-    parser.add_argument('--mode', type=str, help='Running Mode, options: cli, gui, web', default=Config.mode)
-    parser.add_argument('--port', type=int, help='Port used for WebUI mode.', default=Config.port)
-    parser.add_argument('--password', type=str, help='Password for WebUI.', default=Config.password)
+    parser.add_argument('--mode', type=str, help='Running Mode, options: cli, gui', default=Config.mode)
+    parser.add_argument('--port', type=int, help='Port used by the loopback-only desktop UI.', default=Config.port)
+    parser.add_argument('--password', type=str, help='Password for the local UI.', default=Config.password)
 
     parser.add_argument('--debug', action='store_true', help='The debug option, only for VSCode debug launch. (Never saved to config.json)')
-    parser.add_argument('--nocli', action='store_true', help='Disable Interactive CLI on GUI/WEB mode. (Never saved to config.json)')
+    parser.add_argument('--nocli', action='store_true', help='Disable Interactive CLI in GUI mode. (Never saved to config.json)')
 
     args = parser.parse_args()
     try:
@@ -42,7 +41,7 @@ def setup_config_from_args():
             LOGGER.warning(f"Invalid --i18n {Config.i18n}, default to zh-CN.")
             Config.set_config("i18n", DataProvider.default_i18n())
 
-        modes = ["cli", "gui", "web"]
+        modes = ["cli", "gui"]
         if Config.mode not in modes:
             Config.set_config("mode", "gui")
             LOGGER.warning(f"Invalid --mode {Config.mode}, default to GUI.")
@@ -69,9 +68,6 @@ def main():
         case "gui":
             if not Config.nocli: InteractThread.load()
             gui_main()
-        case "web":
-            if not Config.nocli: InteractThread.load()
-            webui_main()
 
 if __name__ == "__main__":
     LOGGER.info(f"Logs written to {APP_DATA_PATH / 'logs'}")

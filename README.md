@@ -26,6 +26,9 @@ Windows 10/11 x64 and supports Steam and dedicated-server saves.
   temporary drops, durability, ammunition, rarity, and eggs.
 - Version `0.3.0` introduces the original Save Studio brand, comfortable type
   sizes, compact layouts, and a consistent editor interface.
+- Version `0.3.1` removes release checking and remote WebUI mode. The packaged
+  application listens only on `127.0.0.1` for its desktop interface and makes
+  no external network requests.
 - Keep all changes in one in-memory draft and save them to the currently opened
   world in one operation.
 
@@ -39,14 +42,15 @@ Windows 10/11 x64 and supports Steam and dedicated-server saves.
 
 ## Supported scope
 
-Version `0.3.0` supports the Windows GUI, Palworld 1.0 data, Steam saves, and
+Version `0.3.1` supports the Windows GUI, Palworld 1.0 data, Steam saves, and
 dedicated-server saves. Item management is currently validated with a Steam
 save only; it does not claim dedicated-server item validation. Item management
 excludes base storage, world containers,
 cross-player transfers, virtual progress records, and out-of-range values. The
 application also does not include Xbox/Game Pass, raw JSON editing, Save As,
-bulk field editing, multi-level undo, installers, automatic updates, telemetry,
-a light theme, or other desktop platforms.
+bulk field editing, multi-level undo, installers, update checks, telemetry,
+external network access, a remote WebUI mode, a light theme, or other desktop
+platforms.
 
 ## Development
 
@@ -66,9 +70,10 @@ The complete Windows pipeline is:
 ```
 
 It runs Python tests, Vitest, TypeScript, Vite, PyInstaller, an executable smoke
-test, and SHA-256 generation. The executable output is
-`dist\Palworld-Save-Studio.exe`; application configuration and logs are stored
-under `%LOCALAPPDATA%\PalworldSaveStudio`.
+test, ZIP packaging, and SHA-256 generation. The executable and Nexus-ready
+archive are `dist\Palworld-Save-Studio.exe` and
+`dist\Palworld-Save-Studio-Windows-x64.zip`; application configuration and logs
+are stored under `%LOCALAPPDATA%\PalworldSaveStudio`.
 
 ## Acknowledgements
 

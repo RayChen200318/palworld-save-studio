@@ -92,7 +92,7 @@ def type_guard(func):
     return wrapper
 
 
-def check_or_generate_port(preferred_port: int, host: str='0.0.0.0') -> int:
+def check_or_generate_port(preferred_port: int, host: str='127.0.0.1') -> int:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         try:
             s.bind((host, preferred_port))

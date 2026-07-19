@@ -36,13 +36,6 @@ export interface SaveConfig {
   BackupEnabled: boolean
 }
 
-export interface UpdateStatus {
-  CurrentVersion: string
-  LatestVersion: string | null
-  UpdateAvailable: boolean
-  ReleaseUrl: string | null
-}
-
 export type PalObjectType = 'pal' | 'human'
 export type PalLocation = 'party' | 'palbox' | 'base' | 'outside'
 export type PalSort = 'deck' | 'level' | 'name' | 'owner'

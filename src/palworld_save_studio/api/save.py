@@ -3,14 +3,12 @@ from pathlib import Path
 import traceback
 from flask import Blueprint, request
 from flask_jwt_extended import jwt_required
-import asyncio
 
 from palworld_save_studio.config import (
     PROGRAM_PATH,
     Config,
     version_info,
     is_gh_build,
-    get_release_status,
 )
 from palworld_save_studio.core import SaveManager
 from palworld_save_studio.core.save_transaction import SaveTransactionError
@@ -276,13 +274,3 @@ def path_back():
         Config.path = old_path
         LOGGER.error(traceback.format_exc())
         return reply(1, msg=f"Error, cannot open path {path}.")
-
-
-@save_blueprint.route("/update", methods=["GET"])
-@jwt_required()
-def has_update():
-    try:
-        return reply(0, asyncio.run(get_release_status()))
-    except Exception:
-        LOGGER.error(f"Release check failed: {traceback.format_exc()}")
-        return reply(1, msg="The latest Release could not be checked."), 503
