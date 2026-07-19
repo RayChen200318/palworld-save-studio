@@ -116,11 +116,23 @@ def validate_pal_changes(pal: PalEntity, raw_changes: Any) -> dict[str, Any]:
         suits = changes["Suitabilities"]
         if not isinstance(suits, dict):
             raise PalValidationError("Suitabilities must be an object.")
+        species = target_species or getattr(pal, "DataAccessKey", None) or getattr(
+            pal, "RawSpecieKey", None
+        )
+        base_suits = DataProvider.get_pal_suitabilities(species) or {}
+        target_rank = changes.get("Rank", getattr(pal, "Rank", 1) or 1)
+        full_rank_bonus = 1 if target_rank >= 5 else 0
         normalized: dict[str, int] = {}
         for key, value in suits.items():
             if PalSuitability.from_value(key) is None:
                 raise PalValidationError(f"Unknown work suitability: {key}")
-            normalized[key] = _integer(value, key, 0, 5)
+            base_rank = base_suits.get(key, 0)
+            if base_rank <= 0:
+                raise PalValidationError(
+                    f"The selected species does not have work suitability: {key}"
+                )
+            legal_minimum = min(10, base_rank + full_rank_bonus)
+            normalized[key] = _integer(value, key, legal_minimum, 10)
         changes["Suitabilities"] = normalized
 
     for key in ("IsBOSS", "IsRarePal", "IsTower", "IsAwakening"):

@@ -76,6 +76,13 @@ def none_guard(
 
 class DataProvider:
     icon_cache = {}
+    CATALOG_LOCALES = ("en", "zh-CN")
+    MUTATION_EXCLUSIVE_PASSIVES = {
+        "MutationPal_Babysitter",
+        "MutationPal_Mutant",
+        "MutationPal_Immortal",
+        "MutationPal_ExplosionResist",
+    }
 
     @staticmethod
     def default_i18n() -> str:
@@ -128,6 +135,16 @@ class DataProvider:
     def get_pal_i18n(key: str) -> Optional[str]:
         i18n_list: dict = PAL_DATA[key]["I18n"]
         return i18n_list.get(Config.i18n, i18n_list.get("en"))
+
+    @none_guard(data_source=PAL_DATA, subkey="I18n")
+    @staticmethod
+    def get_pal_i18n_map(key: str) -> Optional[dict[str, str]]:
+        i18n_list: dict = PAL_DATA[key]["I18n"]
+        fallback = i18n_list.get("en", key)
+        return {
+            locale: i18n_list.get(locale, fallback) or fallback
+            for locale in DataProvider.CATALOG_LOCALES
+        }
 
     @none_guard(data_source=PAL_DATA, subkey="Stats")
     @staticmethod
@@ -215,6 +232,21 @@ class DataProvider:
         i18n: dict = i18n_list.get(Config.i18n, i18n_list.get("en"))
         return (i18n.get("Name", key), i18n.get("Description", ""))
 
+    @none_guard(data_source=PAL_ATTACKS, subkey="I18n")
+    @staticmethod
+    def get_attack_i18n_map(key: str) -> Optional[dict[str, dict[str, str]]]:
+        i18n_list: dict = PAL_ATTACKS[key]["I18n"]
+        fallback: dict = i18n_list.get("en", {})
+        return {
+            locale: {
+                "Name": (i18n_list.get(locale) or fallback).get("Name", key) or key,
+                "Description": (i18n_list.get(locale) or fallback).get(
+                    "Description", ""
+                ),
+            }
+            for locale in DataProvider.CATALOG_LOCALES
+        }
+
     @staticmethod
     def has_attack(key: str) -> bool:
         return key in PAL_ATTACKS
@@ -260,6 +292,25 @@ class DataProvider:
         i18n_list: dict = PAL_PASSIVES[key]["I18n"]
         i18n: dict = i18n_list.get(Config.i18n, i18n_list.get("en"))
         return (i18n.get("Name", key), i18n.get("Description", ""))
+
+    @none_guard(data_source=PAL_PASSIVES, subkey="I18n")
+    @staticmethod
+    def get_passive_i18n_map(key: str) -> Optional[dict[str, dict[str, str]]]:
+        i18n_list: dict = PAL_PASSIVES[key]["I18n"]
+        fallback: dict = i18n_list.get("en", {})
+        return {
+            locale: {
+                "Name": (i18n_list.get(locale) or fallback).get("Name", key) or key,
+                "Description": (i18n_list.get(locale) or fallback).get(
+                    "Description", ""
+                ),
+            }
+            for locale in DataProvider.CATALOG_LOCALES
+        }
+
+    @staticmethod
+    def is_mutation_exclusive_passive(key: str) -> bool:
+        return key in DataProvider.MUTATION_EXCLUSIVE_PASSIVES
 
     @staticmethod
     def has_passive_skill(key: str) -> bool:

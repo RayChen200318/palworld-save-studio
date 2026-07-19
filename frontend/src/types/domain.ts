@@ -106,21 +106,27 @@ export interface PalCatalogItem {
   Elements: string[]
   Invalid: boolean
   Suitabilities: Record<string, number>
-  I18n: string
+  I18n: LocalizedText
   SortingKey: string | null
   IsHuman: boolean
   IconAccessKey: string
 }
 
+export interface LocalizedSkillText {
+  en: { Name: string; Description: string }
+  'zh-CN': { Name: string; Description: string }
+}
+
 export interface PassiveSkill {
   InternalName: string
-  I18n: [string, string]
+  I18n: LocalizedSkillText
   Rating: number
+  IsMutationExclusive: boolean
 }
 
 export interface ActiveSkill {
   InternalName: string
-  I18n: [string, string]
+  I18n: LocalizedSkillText
   HasSkillFruit: boolean
   IsUniqueSkill: boolean
   Power: number
@@ -180,6 +186,26 @@ export type ItemContainerName = 'common' | 'essential' | 'food' | 'weapon' | 'ar
 export interface LocalizedText {
   en: string
   'zh-CN': string
+}
+
+export interface SearchSelectOption {
+  value: string
+  title: string
+  subtitle: string
+  meta?: string
+  badge?: string
+  iconUrl?: string
+  searchText: string
+}
+
+export interface SearchBrowserOption {
+  value: string
+  title: string
+  subtitle: string
+  summary: string
+  searchText: string
+  badge?: string
+  meta?: string
 }
 
 export interface ItemCatalogEntry {

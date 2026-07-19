@@ -153,5 +153,82 @@ class AwakeningPropertyTests(unittest.TestCase):
             self.assertNotIn("bIsAwakening", pal._pal_param)
 
 
+class WorkSuitabilityPropertyTests(unittest.TestCase):
+    def setUp(self) -> None:
+        from palworld_save_studio.core.pal_entity import PalEntity
+        from palworld_save_studio.core.pal_objects import PalObjects
+
+        self.pal = PalEntity.__new__(PalEntity)
+        self.pal._pal_param = {
+            "GotWorkSuitabilityAddRankList": PalObjects.GotWorkSuitabilityAddRankList()
+        }
+
+    def test_base_extra_and_full_condensation_are_capped_at_ten(self) -> None:
+        from unittest.mock import PropertyMock
+
+        from palworld_save_studio.core.pal_entity import PalEntity
+        from palworld_save_studio.core.pal_objects import PalObjects, PalSuitability
+
+        container = self.pal._pal_param["GotWorkSuitabilityAddRankList"]
+        PalObjects.set_WorkSuitability(
+            container, PalSuitability.Handcraft, 4
+        )
+        with patch.object(
+            PalEntity, "DataAccessKey", new_callable=PropertyMock, return_value="Anubis"
+        ), patch.object(PalEntity, "Rank", new_callable=PropertyMock, return_value=5):
+            self.assertEqual(
+                self.pal.WorkSuitabilities["EPalWorkSuitability::Handcraft"], 10
+            )
+
+    def test_setting_minimum_removes_extra_and_ten_stores_only_delta(self) -> None:
+        from unittest.mock import PropertyMock
+
+        from palworld_save_studio.core.pal_entity import PalEntity
+        from palworld_save_studio.core.pal_objects import PalObjects, PalSuitability
+        from palworld_save_studio.utils import LOGGER
+
+        container = self.pal._pal_param["GotWorkSuitabilityAddRankList"]
+        PalObjects.set_WorkSuitability(container, PalSuitability.Handcraft, 2)
+        with patch.object(
+            PalEntity, "DataAccessKey", new_callable=PropertyMock, return_value="Anubis"
+        ), patch.object(PalEntity, "Rank", new_callable=PropertyMock, return_value=5), patch.object(
+            LOGGER, "_print_change"
+        ):
+            self.pal.set_WorkSuitability(PalSuitability.Handcraft, 7)
+            self.assertIsNone(self.pal.AddedWorkSuitabilities)
+
+            self.pal.set_WorkSuitability(PalSuitability.Handcraft, 10)
+            self.assertEqual(
+                self.pal.AddedWorkSuitabilities[PalSuitability.Handcraft], 3
+            )
+
+    def test_species_change_removes_unsupported_types_and_caps_at_ten(self) -> None:
+        from unittest.mock import PropertyMock
+
+        from palworld_save_studio.core.pal_entity import PalEntity
+        from palworld_save_studio.core.pal_objects import PalObjects, PalSuitability
+        from palworld_save_studio.utils import LOGGER
+
+        container = self.pal._pal_param["GotWorkSuitabilityAddRankList"]
+        PalObjects.set_WorkSuitability(container, PalSuitability.Handcraft, 2)
+        PalObjects.set_WorkSuitability(container, PalSuitability.Watering, 4)
+        with patch.object(
+            PalEntity,
+            "DataAccessKey",
+            new_callable=PropertyMock,
+            return_value="BlueSkyDragon",
+        ), patch.object(PalEntity, "Rank", new_callable=PropertyMock, return_value=5), patch.object(
+            LOGGER, "_print_change"
+        ):
+            self.pal._reconcile_work_suitabilities()
+            self.assertNotIn(PalSuitability.Handcraft, self.pal.AddedWorkSuitabilities)
+            self.assertEqual(
+                self.pal.AddedWorkSuitabilities[PalSuitability.Watering], 1
+            )
+            self.assertEqual(
+                self.pal.WorkSuitabilities["EPalWorkSuitability::Watering"], 10
+            )
+
+
 if __name__ == "__main__":
     unittest.main()

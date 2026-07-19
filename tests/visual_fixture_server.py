@@ -157,6 +157,28 @@ def localized_for(record, locale: str, fallback: str):
     return value.get("Name", fallback) if isinstance(value, dict) else value
 
 
+def bilingual_name(record):
+    fallback = record.get("InternalName", "")
+    return {
+        locale: localized_for(record, locale, fallback)
+        for locale in ("en", "zh-CN")
+    }
+
+
+def bilingual_skill(record):
+    fallback = record.get("InternalName", "")
+    values = {}
+    for locale in ("en", "zh-CN"):
+        localized_value = record.get("I18n", {}).get(locale) or record.get(
+            "I18n", {}
+        ).get("en", {})
+        values[locale] = {
+            "Name": localized_value.get("Name", fallback),
+            "Description": localized_value.get("Description", ""),
+        }
+    return values
+
+
 def pal_summary(index: int):
     is_human = index % 11 == 10
     key = (HUMAN_SPECIES if is_human else SPECIES)[index % (len(HUMAN_SPECIES) if is_human else len(SPECIES))]
@@ -205,7 +227,7 @@ def session():
 
 
 @app.route("/api/save/fetch_config")
-def config(): return ok({"I18n": "zh-CN", "I18nList": {"zh-CN": "简体中文", "en": "English"}, "Path": session()["Path"], "HasPassword": False, "VERSION": "0.3.1", "IsOfficialBuild": False, "BackupEnabled": True})
+def config(): return ok({"I18n": "zh-CN", "I18nList": {"zh-CN": "简体中文", "en": "English"}, "Path": session()["Path"], "HasPassword": False, "VERSION": "0.4.0", "IsOfficialBuild": False, "BackupEnabled": True})
 
 
 @app.route("/api/auth/login", methods=["POST"])
@@ -254,19 +276,20 @@ def pal_catalog():
     records = []
     for key in [*SPECIES, *HUMAN_SPECIES]:
         record = (HUMANS if key in HUMANS else PALS)[key]
-        records.append({"InternalName": key, "Elements": record.get("Elements", []), "Invalid": False, "Suitabilities": record.get("Suitabilities", {}), "I18n": localized(record), "SortingKey": record.get("SortingKey", {}).get("paldeck", ""), "IsHuman": bool(record.get("Human")), "IconAccessKey": key if not record.get("Human") or record.get("HasIcon") else "Human"})
+        records.append({"InternalName": key, "Elements": record.get("Elements", []), "Invalid": False, "Suitabilities": record.get("Suitabilities", {}), "I18n": bilingual_name(record), "SortingKey": record.get("SortingKey", {}).get("paldeck", ""), "IsHuman": bool(record.get("Human")), "IconAccessKey": key if not record.get("Human") or record.get("HasIcon") else "Human"})
     return ok({"dict": {item["InternalName"]: item for item in records}, "arr": records})
 
 
 @app.route("/api/save/passive_skills")
 def passive_catalog():
-    records = [{"InternalName": key, "I18n": [localized(value), value.get("I18n", {}).get("zh-CN", {}).get("Description", "")], "Rating": value.get("Rating", 0)} for key, value in list(PASSIVES.items())[:60]]
+    mutation_passives = {"MutationPal_Babysitter", "MutationPal_Mutant", "MutationPal_Immortal", "MutationPal_ExplosionResist"}
+    records = [{"InternalName": key, "I18n": bilingual_skill(value), "Rating": value.get("Rating", 0), "IsMutationExclusive": key in mutation_passives} for key, value in PASSIVES.items()]
     return ok({"dict": {item["InternalName"]: item for item in records}, "arr": records})
 
 
 @app.route("/api/save/active_skills")
 def active_catalog():
-    records = [{"InternalName": key, "I18n": [localized(value), ""], "HasSkillFruit": bool(value.get("SkillFruit")), "IsUniqueSkill": bool(value.get("UniqueSkill")), "Power": value.get("Power", 0), "Element": value.get("Element", ""), "CT": value.get("CT", 0), "Invalid": False} for key, value in list(ATTACKS.items())[:100]]
+    records = [{"InternalName": key, "I18n": bilingual_skill(value), "HasSkillFruit": bool(value.get("SkillFruit")), "IsUniqueSkill": bool(value.get("UniqueSkill")), "Power": value.get("Power", 0), "Element": value.get("Element", ""), "CT": value.get("CT", 0), "Invalid": False} for key, value in list(ATTACKS.items())[:100]]
     return ok({"dict": {item["InternalName"]: item for item in records}, "arr": records})
 
 

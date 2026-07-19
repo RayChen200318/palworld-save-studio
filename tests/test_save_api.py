@@ -85,6 +85,46 @@ class SaveApiTests(unittest.TestCase):
         first_item = next(item for items in groups.values() for item in items)
         self.assertIsInstance(first_item["I18n"], str)
 
+    def test_pal_and_skill_catalogs_include_both_supported_languages(self) -> None:
+        pal = self.client.get("/api/save/pal_data", headers=self.headers).get_json()[
+            "data"
+        ]["dict"]["Anubis"]
+        passive = self.client.get(
+            "/api/save/passive_skills", headers=self.headers
+        ).get_json()["data"]["dict"]["Legend"]
+        active_payload = self.client.get(
+            "/api/save/active_skills", headers=self.headers
+        ).get_json()["data"]["arr"]
+        active = next(item for item in active_payload if item["I18n"]["en"]["Description"])
+        active_without_description = next(
+            item for item in active_payload if not item["I18n"]["en"]["Description"]
+        )
+
+        self.assertEqual(set(pal["I18n"]), {"en", "zh-CN"})
+        self.assertEqual(set(passive["I18n"]), {"en", "zh-CN"})
+        self.assertTrue(passive["I18n"]["zh-CN"]["Description"])
+        self.assertEqual(set(active["I18n"]), {"en", "zh-CN"})
+        self.assertTrue(active["I18n"]["en"]["Description"])
+        self.assertEqual(
+            active_without_description["I18n"]["en"]["Description"], ""
+        )
+        self.assertTrue(active_without_description["I18n"]["en"]["Name"])
+
+    def test_verified_mutation_passives_are_flagged_exclusively(self) -> None:
+        payload = self.client.get(
+            "/api/save/passive_skills", headers=self.headers
+        ).get_json()["data"]["dict"]
+        expected = {
+            "MutationPal_Babysitter",
+            "MutationPal_Mutant",
+            "MutationPal_Immortal",
+            "MutationPal_ExplosionResist",
+        }
+        actual = {
+            key for key, value in payload.items() if value["IsMutationExclusive"]
+        }
+        self.assertEqual(actual, expected)
+
     def test_item_mutation_marks_one_dirty_revision(self) -> None:
         manager = MagicMock()
         manager._loaded = True

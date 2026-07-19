@@ -4,16 +4,19 @@ import { useRouter } from 'vue-router'
 import AppIcon from '@/components/AppIcon.vue'
 import AppShell from '@/components/AppShell.vue'
 import ModalDialog from '@/components/ModalDialog.vue'
+import SearchableSelect from '@/components/SearchableSelect.vue'
 import StatusPill from '@/components/StatusPill.vue'
 import { messages } from '@/i18n/messages'
+import { useCatalogStore } from '@/stores/catalog'
 import { useCollectionStore } from '@/stores/collection'
 import { useDraftStore } from '@/stores/draft'
 import { useItemsStore } from '@/stores/items'
 import { useSessionStore } from '@/stores/session'
-import type { ItemCatalogEntry, ItemContainerName, ItemSlot } from '@/types/domain'
+import type { ItemCatalogEntry, ItemContainerName, ItemSlot, SearchSelectOption } from '@/types/domain'
 
 const router = useRouter()
 const session = useSessionStore()
+const catalog = useCatalogStore()
 const collection = useCollectionStore()
 const draft = useDraftStore()
 const items = useItemsStore()
@@ -46,6 +49,19 @@ const moveSlots = computed(() => {
   if (!inventory.value || moveContainer.value === 'drop') return []
   return inventory.value.Containers[moveContainer.value].Slots.filter((slot) => slot.Unlocked)
 })
+const eggSpeciesOptions = computed<SearchSelectOption[]>(() => (items.catalog?.EggSpecies || []).map((pal) => {
+  const species = catalog.palById.get(pal.CharacterId)
+  const sortingKey = species?.SortingKey || ''
+  return {
+    value: pal.CharacterId,
+    title: pal.I18n[session.locale] || pal.I18n.en || pal.CharacterId,
+    subtitle: pal.CharacterId,
+    meta: sortingKey ? `${copy.value.pals.paldeck} #${sortingKey}` : '',
+    badge: copy.value.pals.typePal,
+    iconUrl: `/image/pals/${pal.IconAccessKey}`,
+    searchText: `${pal.I18n.en} ${pal.I18n['zh-CN']} ${pal.CharacterId} ${sortingKey}`,
+  }
+}))
 
 function itemName(item: { I18n: { en: string; 'zh-CN': string }; StaticId: string }) {
   return item.I18n[session.locale] || item.I18n.en || item.StaticId
@@ -201,7 +217,7 @@ onMounted(async () => {
     return
   }
   try {
-    await Promise.all([collection.loadPlayers(), items.loadCatalog()])
+    await Promise.all([collection.loadPlayers(), items.loadCatalog(), catalog.load()])
     const playerId = items.selectedPlayerId || collection.players[0]?.PlayerUId
     if (playerId) await items.loadInventory(playerId)
   } catch (error) {
@@ -317,7 +333,7 @@ onMounted(async () => {
           <p v-if="!visibleCatalog.length" class="catalog-empty">{{ copy.common.noResults }}</p>
         </div>
         <aside class="add-options">
-          <template v-if="chosenEntry"><img :src="`/image/items/${chosenEntry.IconKey}`" alt="" loading="lazy" /><h3>{{ itemName(chosenEntry) }}</h3><code>{{ chosenEntry.StaticId }}</code><label v-if="!chosenEntry.DynamicType"><span class="field-label">{{ copy.items.quantity }}</span><input v-model.number="addQuantity" class="field-input" type="number" min="1" :max="chosenEntry.MaxStack" /></label><label v-if="chosenEntry.DynamicType === 'egg'"><span class="field-label">{{ copy.items.eggSpecies }}</span><select v-model="eggCharacterId" class="field-select"><option v-for="pal in items.catalog?.EggSpecies" :key="pal.CharacterId" :value="pal.CharacterId">{{ pal.I18n[session.locale] || pal.I18n.en }} · {{ pal.CharacterId }}</option></select></label><p>{{ copy.items.target }}: {{ copy.items.containers[items.selectedContainer] }} · {{ (items.selectedSlotIndex || 0) + 1 }}</p></template>
+          <template v-if="chosenEntry"><img :src="`/image/items/${chosenEntry.IconKey}`" alt="" loading="lazy" /><h3>{{ itemName(chosenEntry) }}</h3><code>{{ chosenEntry.StaticId }}</code><label v-if="!chosenEntry.DynamicType"><span class="field-label">{{ copy.items.quantity }}</span><input v-model.number="addQuantity" class="field-input" type="number" min="1" :max="chosenEntry.MaxStack" /></label><label v-if="chosenEntry.DynamicType === 'egg'"><span class="field-label">{{ copy.items.eggSpecies }}</span><SearchableSelect v-model="eggCharacterId" :options="eggSpeciesOptions" :placeholder="copy.items.eggSpecies" :search-placeholder="copy.items.eggSpeciesSearch" :empty-text="copy.common.noResults" /></label><p>{{ copy.items.target }}: {{ copy.items.containers[items.selectedContainer] }} · {{ (items.selectedSlotIndex || 0) + 1 }}</p></template>
           <p v-else>{{ copy.items.chooseItem }}</p>
         </aside>
       </div>

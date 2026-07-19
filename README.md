@@ -19,6 +19,12 @@ Windows 10/11 x64 and supports Steam and dedicated-server saves.
 - Create, duplicate, edit, retrieve, heal, and delete Pals or human NPCs.
 - Edit species, nickname, gender, level, friendship, IVs, condensation, souls,
   work suitability, passive traits, active skills, and special flags.
+- Search species by Chinese or English name, internal ID, or Paldeck number
+  when creating a Pal, changing an existing species, or choosing an egg Pal.
+- Edit innate work suitability through level 10 using Palworld 1.0 condensation
+  rules, with server-side validation of each species' legal minimum.
+- Browse bilingual passive-trait effects and active-skill descriptions, element,
+  power, and cooldown; verified mutation-exclusive traits have a dedicated filter.
 - Edit player nickname, level, technology points, Boss technology points, and
   viewing-cage access.
 - Browse technology by level and toggle normal or Boss technology.
@@ -29,6 +35,8 @@ Windows 10/11 x64 and supports Steam and dedicated-server saves.
 - Version `0.3.1` removes release checking and remote WebUI mode. The packaged
   application listens only on `127.0.0.1` for its desktop interface and makes
   no external network requests.
+- Version `0.4.0` adds searchable species selectors, level-10 work suitability,
+  bilingual skill details, and a verified mutation-exclusive trait category.
 - Keep all changes in one in-memory draft and save them to the currently opened
   world in one operation.
 
@@ -42,7 +50,7 @@ Windows 10/11 x64 and supports Steam and dedicated-server saves.
 
 ## Supported scope
 
-Version `0.3.1` supports the Windows GUI, Palworld 1.0 data, Steam saves, and
+Version `0.4.0` supports the Windows GUI, Palworld 1.0 data, Steam saves, and
 dedicated-server saves. Item management is currently validated with a Steam
 save only; it does not claim dedicated-server item validation. Item management
 excludes base storage, world containers,
