@@ -25,6 +25,17 @@ The resulting catalog and WebP icon bundle are stored locally so the item
 manager does not contact those services at runtime. PalDB and the bundled game
 artwork remain the property of their respective owners.
 
+The offline Pal, passive-trait, and active-skill catalogs include English and
+Chinese display names and game descriptions matched from PalDB's bilingual
+reference pages:
+https://paldb.cc/en/Passive_Skills
+https://paldb.cc/cn/Passive_Skills
+https://paldb.cc/en/Active_Skills
+https://paldb.cc/cn/Active_Skills
+
+Those descriptions and skill statistics are packaged with the application;
+the editor does not contact PalDB at runtime.
+
 Palworld Save Studio is an unofficial fan-made tool. Palworld and related
 names, marks, and assets are the property of Pocketpair, Inc. This project is
 not affiliated with, endorsed by, or sponsored by Pocketpair, Inc.

@@ -207,13 +207,7 @@ class PalEntity:
             # Unset invalid movesets
             self.remove_unique_attacks()
             # Unset invalid work suitabilities
-            if self.AddedWorkSuitabilities:
-                new_suits = DataProvider.get_pal_suitabilities(self.DataAccessKey)
-                for suit, rank in self.AddedWorkSuitabilities.items():
-                    if new_suits is None or new_suits[suit.value] == 0:
-                        self.set_WorkSuitability(suit, 0)
-                    elif rank + new_suits[suit.value] > 5:
-                        self.set_WorkSuitability(suit, 5)
+            self._reconcile_work_suitabilities()
 
         self.learn_attacks()
         if self.IsTower or self.IsRAID or self.IsPREDATOR:
@@ -965,6 +959,19 @@ class PalEntity:
             self._pal_param.get("GotWorkSuitabilityAddRankList")
         )
 
+    def _reconcile_work_suitabilities(self) -> None:
+        """Keep stored work additions valid after changing the Pal species."""
+        if not self.AddedWorkSuitabilities:
+            return
+        new_suits = DataProvider.get_pal_suitabilities(self.DataAccessKey) or {}
+        full_rank_bonus = 1 if (self.Rank or 0) >= 5 else 0
+        for suit, rank in self.AddedWorkSuitabilities.items():
+            base_rank = new_suits.get(suit.value, 0)
+            if base_rank <= 0:
+                self.set_WorkSuitability(suit, 0)
+            elif base_rank + max(0, rank) + full_rank_bonus > 10:
+                self.set_WorkSuitability(suit, 10)
+
     @property
     def WorkSuitabilities(self) -> Optional[dict[str, int]]:
         suits_data = DataProvider.get_pal_suitabilities(self.DataAccessKey)
@@ -977,13 +984,13 @@ class PalEntity:
             for suit, rank in self.AddedWorkSuitabilities.items():
                 suit = suit.value
                 if suit in suits:
-                    suits[suit] += rank
+                    suits[suit] += max(0, rank)
 
         if (self.Rank or 0) >= 5:
             for suit in suits:
-                suits[suit] += 1 if suits[suit] < 5 else 0
+                suits[suit] += 1
 
-        return suits
+        return {suit: min(10, rank) for suit, rank in suits.items()}
 
     @LOGGER.change_logger("WorkSuitabilities")
     @LOGGER.change_logger("AddedWorkSuitabilities")
@@ -1009,9 +1016,18 @@ class PalEntity:
             if not suits:
                 return
 
-            added_rank = rank - (
-                suits[suit.value] + (1 if (self.Rank or 0) >= 5 else 0)
+            base_rank = suits.get(suit.value, 0)
+            if base_rank <= 0:
+                LOGGER.warning(
+                    f"Species {self.DataAccessKey} has no work suitability {suit.value}"
+                )
+                return
+
+            legal_minimum = min(
+                10, base_rank + (1 if (self.Rank or 0) >= 5 else 0)
             )
+            rank = min(10, max(legal_minimum, rank))
+            added_rank = rank - legal_minimum
             if added_rank <= 0:
                 PalObjects.pop_WorkSuitability(
                     self._pal_param["GotWorkSuitabilityAddRankList"], suit

@@ -3,6 +3,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { apiClient } from '@/services/apiClient'
+import { useCatalogStore } from '@/stores/catalog'
 import { useCollectionStore } from '@/stores/collection'
 import { useItemsStore } from '@/stores/items'
 import { useSessionStore } from '@/stores/session'
@@ -43,8 +44,17 @@ const catalog: ItemCatalog = {
       Rarity: 0, Rank: 1, SortId: 1, MaxStack: 9999, DynamicType: null, MaxDurability: 0,
       MagazineSize: 0, IconKey: 'wood',
     },
+    Egg_Dark: {
+      StaticId: 'Egg_Dark', BaseKey: 'Egg_Dark', I18n: { en: 'Dark Egg', 'zh-CN': '暗黑蛋' }, Category: 'egg',
+      TypeA: 'Consume', TypeB: 'PalEgg', EquipSlot: null, AllowedContainers: ['common'],
+      Rarity: 0, Rank: 1, SortId: 2, MaxStack: 1, DynamicType: 'egg', MaxDurability: 0,
+      MagazineSize: 0, IconKey: 'egg_dark',
+    },
   },
-  Groups: [], EggSpecies: [],
+  Groups: [], EggSpecies: [
+    { CharacterId: 'Anubis', I18n: { en: 'Anubis', 'zh-CN': '阿努比斯' }, IconAccessKey: 'Anubis' },
+    { CharacterId: 'WorldTreeDragon', I18n: { en: 'Astralym', 'zh-CN': '枯星龙' }, IconAccessKey: 'WorldTreeDragon' },
+  ],
 }
 
 async function mountView() {
@@ -66,6 +76,12 @@ async function mountView() {
   store.inventory = inventory()
   store.selectedPlayerId = 'p1'
   store.selectedSlotIndex = 0
+  const palCatalog = useCatalogStore()
+  palCatalog.loaded = true
+  palCatalog.pals = [
+    { InternalName: 'Anubis', Elements: ['Earth'], Invalid: false, Suitabilities: {}, I18n: { en: 'Anubis', 'zh-CN': '阿努比斯' }, SortingKey: '100', IsHuman: false, IconAccessKey: 'Anubis' },
+    { InternalName: 'WorldTreeDragon', Elements: ['Dragon'], Invalid: false, Suitabilities: {}, I18n: { en: 'Astralym', 'zh-CN': '枯星龙' }, SortingKey: '204', IsHuman: false, IconAccessKey: 'WorldTreeDragon' },
+  ]
   const wrapper = mount(ItemsView, {
     global: {
       plugins: [pinia, router],
@@ -131,5 +147,19 @@ describe('ItemsView', () => {
 
     expect(loadSpy).toHaveBeenCalledWith('p2')
     expect(useItemsStore().selectedPlayerId).toBe('p2')
+  })
+
+  it('searches legal egg species by bilingual name and Paldeck number', async () => {
+    const { wrapper, store } = await mountView()
+    store.selectSlot(1)
+    await wrapper.vm.$nextTick()
+    await wrapper.findAll('button').find((button) => button.text().includes('添加到此槽位'))!.trigger('click')
+    await wrapper.findAll('.catalog-list button').find((button) => button.text().includes('暗黑蛋'))!.trigger('click')
+    await wrapper.get('.add-options .select-trigger').trigger('click')
+    await wrapper.get('.add-options .select-search input').setValue('204')
+    expect(wrapper.findAll('.add-options .select-results button')).toHaveLength(1)
+    expect(wrapper.text()).toContain('枯星龙')
+    await wrapper.get('.add-options .select-search input').setValue('Anubis')
+    expect(wrapper.text()).toContain('阿努比斯')
   })
 })

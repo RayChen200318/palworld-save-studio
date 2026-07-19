@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import AppIcon from '@/components/AppIcon.vue'
 import AppShell from '@/components/AppShell.vue'
 import ModalDialog from '@/components/ModalDialog.vue'
+import SearchableSelect from '@/components/SearchableSelect.vue'
 import StatusPill from '@/components/StatusPill.vue'
 import VirtualPalGrid from '@/components/VirtualPalGrid.vue'
 import { messages } from '@/i18n/messages'
@@ -11,6 +12,7 @@ import { useCatalogStore } from '@/stores/catalog'
 import { useCollectionStore } from '@/stores/collection'
 import { useDraftStore } from '@/stores/draft'
 import { useSessionStore } from '@/stores/session'
+import type { SearchSelectOption } from '@/types/domain'
 
 const route = useRoute()
 const router = useRouter()
@@ -25,6 +27,15 @@ const species = ref('')
 const notice = ref('')
 const owners = computed(() => collection.players)
 const speciesOptions = computed(() => catalog.pals)
+const speciesPickerOptions = computed<SearchSelectOption[]>(() => speciesOptions.value.map((item) => ({
+  value: item.InternalName,
+  title: item.I18n[session.locale] || item.I18n.en || item.InternalName,
+  subtitle: item.InternalName,
+  meta: item.SortingKey ? `${copy.value.pals.paldeck} #${item.SortingKey}` : '',
+  badge: item.IsHuman ? copy.value.pals.typeHuman : copy.value.pals.typePal,
+  iconUrl: `/image/pals/${item.IconAccessKey}`,
+  searchText: `${item.I18n.en} ${item.I18n['zh-CN']} ${item.InternalName} ${item.SortingKey || ''}`,
+})))
 const elements = computed(() => [...new Set(collection.pals.flatMap((pal) => pal.Elements))].sort())
 
 onMounted(async () => {
@@ -76,7 +87,7 @@ async function healAll() {
     <div v-if="notice" class="toast"><AppIcon name="check" :size="16" />{{ notice }}</div>
 
     <ModalDialog :open="addOpen" :title="copy.pals.addTitle" width="620px" @close="addOpen = false">
-      <div class="add-form"><label><span class="field-label">{{ copy.pals.chooseOwner }}</span><select v-model="owner" class="field-select"><option v-for="player in owners" :key="player.PlayerUId" :value="player.PlayerUId">{{ player.NickName }} · {{ player.PlayerUId }}</option></select></label><label><span class="field-label">{{ copy.pals.chooseSpecies }}</span><select v-model="species" class="field-select"><option v-for="item in speciesOptions" :key="item.InternalName" :value="item.InternalName">{{ item.I18n }} · {{ item.InternalName }}</option></select></label><div class="destination"><AppIcon name="box" :size="19" /><span>{{ copy.pals.destination }}</span></div><p v-if="draft.error" class="error">{{ draft.error }}</p></div>
+      <div class="add-form"><label><span class="field-label">{{ copy.pals.chooseOwner }}</span><select v-model="owner" class="field-select"><option v-for="player in owners" :key="player.PlayerUId" :value="player.PlayerUId">{{ player.NickName }} · {{ player.PlayerUId }}</option></select></label><label><span class="field-label">{{ copy.pals.chooseSpecies }}</span><SearchableSelect v-model="species" :options="speciesPickerOptions" :placeholder="copy.pals.chooseSpecies" :search-placeholder="copy.pals.searchSpecies" :empty-text="copy.common.noResults" /></label><div class="destination"><AppIcon name="box" :size="19" /><span>{{ copy.pals.destination }}</span></div><p v-if="draft.error" class="error">{{ draft.error }}</p></div>
       <template #footer><button class="button secondary" type="button" @click="addOpen = false">{{ copy.common.cancel }}</button><button class="button primary" type="button" :disabled="!owner || !species || draft.pending" @click="create">{{ copy.pals.create }}</button></template>
     </ModalDialog>
   </AppShell>

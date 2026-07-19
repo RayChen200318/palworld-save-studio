@@ -115,9 +115,15 @@ def get_passive_skills():
     for passive in passives_raw:
         data = {
             "InternalName": passive["InternalName"],
-            "I18n": DataProvider.get_passive_i18n(passive["InternalName"])
-            or (passive["InternalName"], passive["InternalName"]),
+            "I18n": DataProvider.get_passive_i18n_map(passive["InternalName"])
+            or {
+                "en": {"Name": passive["InternalName"], "Description": ""},
+                "zh-CN": {"Name": passive["InternalName"], "Description": ""},
+            },
             "Rating": passive["Rating"],
+            "IsMutationExclusive": DataProvider.is_mutation_exclusive_passive(
+                passive["InternalName"]
+            ),
         }
         passive_dict[passive["InternalName"]] = data
         passive_arr.append(data)
@@ -140,10 +146,11 @@ def get_active_skills():
             #         f'{"🍐" if DataProvider.has_skill_fruit(attack["InternalName"]) else ""}' \
             #         f'{"✨"if DataProvider.is_unique_attacks(attack["InternalName"]) else ""}' \
             #         f'{DataProvider.get_attack_i18n(attack["InternalName"]) or attack["InternalName"]}',
-            "I18n": list(
-                DataProvider.get_attack_i18n(attack["InternalName"])
-                or [attack["InternalName"], ""]
-            ),
+            "I18n": DataProvider.get_attack_i18n_map(attack["InternalName"])
+            or {
+                "en": {"Name": attack["InternalName"], "Description": ""},
+                "zh-CN": {"Name": attack["InternalName"], "Description": ""},
+            },
             "HasSkillFruit": DataProvider.has_skill_fruit(attack["InternalName"]),
             "IsUniqueSkill": DataProvider.is_unique_attacks(attack["InternalName"]),
             "Power": attack["Power"],
@@ -184,7 +191,8 @@ def get_pal_data():
             "Elements": pal["Elements"],
             "Invalid": pal.get("Invalid", False),
             "Suitabilities": DataProvider.get_pal_suitabilities(iname),
-            "I18n": DataProvider.get_pal_i18n(iname) or iname,
+            "I18n": DataProvider.get_pal_i18n_map(iname)
+            or {"en": iname, "zh-CN": iname},
             "SortingKey": DataProvider.get_pal_sorting_key(iname),
             "IsHuman": DataProvider.is_pal_human(iname) or False,
             "IconAccessKey": iname if not DataProvider.is_pal_human(iname) or DataProvider.has_human_icon(iname) else "Human",

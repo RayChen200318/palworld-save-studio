@@ -13,6 +13,9 @@ class FakePal:
     HasTowerVariant = True
     MasteredWaza = []
     EquipWaza = []
+    DataAccessKey = "Anubis"
+    RawSpecieKey = "Anubis"
+    Rank = 1
 
 
 class PalValidationTests(unittest.TestCase):
@@ -77,6 +80,59 @@ class PalValidationTests(unittest.TestCase):
             if item.get("Invalid") and not item.get("Human")
         )
         self.assertFalse(DataProvider.is_editable_species(invalid_pal))
+
+    def test_work_suitability_accepts_innate_range_through_level_ten(self) -> None:
+        work = "EPalWorkSuitability::Handcraft"
+        changes = validate_pal_changes(self.pal, {"Suitabilities": {work: 10}})
+        self.assertEqual(changes["Suitabilities"][work], 10)
+
+        with self.assertRaisesRegex(PalValidationError, "between 6 and 10"):
+            validate_pal_changes(self.pal, {"Suitabilities": {work: 5}})
+        with self.assertRaisesRegex(PalValidationError, "between 6 and 10"):
+            validate_pal_changes(self.pal, {"Suitabilities": {work: 11}})
+
+    def test_full_condensation_raises_work_suitability_minimum(self) -> None:
+        work = "EPalWorkSuitability::Handcraft"
+        with self.assertRaisesRegex(PalValidationError, "between 7 and 10"):
+            validate_pal_changes(
+                self.pal,
+                {"Rank": 5, "Suitabilities": {work: 6}},
+            )
+        changes = validate_pal_changes(
+            self.pal,
+            {"Rank": 5, "Suitabilities": {work: 7}},
+        )
+        self.assertEqual(changes["Suitabilities"][work], 7)
+
+    def test_work_suitability_uses_target_species_and_rejects_missing_type(self) -> None:
+        watering = "EPalWorkSuitability::Watering"
+        mining = "EPalWorkSuitability::Mining"
+        with self.assertRaisesRegex(PalValidationError, "between 9 and 10"):
+            validate_pal_changes(
+                self.pal,
+                {
+                    "CharacterID": "BlueSkyDragon",
+                    "Rank": 5,
+                    "Suitabilities": {watering: 8},
+                },
+            )
+        changes = validate_pal_changes(
+            self.pal,
+            {
+                "CharacterID": "BlueSkyDragon",
+                "Rank": 5,
+                "Suitabilities": {watering: 9},
+            },
+        )
+        self.assertEqual(changes["Suitabilities"][watering], 9)
+        with self.assertRaisesRegex(PalValidationError, "does not have"):
+            validate_pal_changes(
+                self.pal,
+                {
+                    "CharacterID": "BlueSkyDragon",
+                    "Suitabilities": {mining: 8},
+                },
+            )
 
 
 if __name__ == "__main__":
