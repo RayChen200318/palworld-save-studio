@@ -13,6 +13,10 @@ Windows 10/11 x64 and supports Steam and dedicated-server saves.
 
 [Download the latest Windows release](https://github.com/RayChen200318/palworld-save-studio/releases/latest)
 
+## Guides
+
+- [Using Save Studio with a dedicated server](https://github.com/RayChen200318/palworld-save-studio/blob/main/docs/dedicated-server-guide.md)
+
 ## Editing features
 
 - Browse every player Pal, base worker, object outside a container, and human NPC.
