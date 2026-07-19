@@ -13,6 +13,10 @@ Palworld Save Studio 是一款适用于《幻兽帕鲁》1.0 的 Windows 存档�
 
 [下载最新 Windows 版本](https://github.com/RayChen200318/palworld-save-studio/releases/latest)
 
+## 使用指南
+
+- [在专用服务器上使用 Save Studio](https://github.com/RayChen200318/palworld-save-studio/blob/main/docs/dedicated-server-guide.zh-CN.md)
+
 ## 编辑功能
 
 - 查看所有玩家帕鲁、基地工作帕鲁、容器外对象和人类 NPC。
