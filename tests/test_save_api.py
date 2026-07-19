@@ -77,7 +77,7 @@ class SaveApiTests(unittest.TestCase):
 
     def test_update_check_reads_the_new_repository_release_status(self) -> None:
         result = {
-            "CurrentVersion": "0.3.0-beta.1",
+            "CurrentVersion": "0.3.0",
             "LatestVersion": None,
             "UpdateAvailable": False,
             "ReleaseUrl": None,
