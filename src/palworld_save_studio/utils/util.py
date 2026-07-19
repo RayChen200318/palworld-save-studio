@@ -1,5 +1,7 @@
 from pathlib import Path
+import os
 import re
+import string
 from functools import wraps
 import sys
 from typing import Callable, Optional, get_type_hints, Union, _GenericAlias
@@ -13,21 +15,55 @@ def reply(status, data=None, msg=None):
     return jsonify({"status": status, "data": data, "msg": msg})
 
 
+def _windows_drive_candidates() -> list[str]:
+    list_drives = getattr(os, "listdrives", None)
+    if callable(list_drives):
+        return list(list_drives())
+    return [f"{letter}:\\" for letter in string.ascii_uppercase]
+
+
+def get_path_roots() -> list[str]:
+    if os.name != "nt":
+        return [str(Path(Path.cwd().anchor or os.sep).resolve())]
+
+    roots: list[str] = []
+    for root in _windows_drive_candidates():
+        try:
+            if os.path.isdir(root):
+                roots.append(root)
+        except OSError:
+            continue
+    return roots
+
+
 def get_path_context(path: Path) -> dict:
-    current_path = path.resolve()
+    current_path = path.expanduser().resolve(strict=True)
+    if not current_path.is_dir():
+        raise NotADirectoryError(str(current_path))
+
+    entries: list[tuple[Path, bool]] = []
+    for child in current_path.iterdir():
+        try:
+            is_directory = child.is_dir()
+        except OSError:
+            is_directory = False
+        entries.append((child, is_directory))
+    entries.sort(key=lambda item: (not item[1], item[0].name.casefold()))
+
     children = {
         str(child.resolve()): {
             "filename": child.name,
-            "isDir": child.is_dir(),
+            "isDir": is_directory,
         }
-        for child in sorted(current_path.iterdir(), key=lambda x: (x.is_file(), x.name))
+        for child, is_directory in entries
     }
 
-    names = [child.name for child in current_path.iterdir()]
+    names = [child.name for child, _ in entries]
     is_pal_dir = "Level.sav" in names and "Players" in names
 
     return {
         "currentPath": str(current_path),
+        "roots": get_path_roots(),
         "children": children,
         "isPalDir": is_pal_dir
     }

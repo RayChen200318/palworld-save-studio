@@ -1,6 +1,6 @@
 const zhCN = {
   common: {
-    product: 'Palworld Save Studio', version: '0.4.1', beta: '正式版', unofficial: '非官方粉丝工具',
+    product: 'Palworld Save Studio', version: '0.4.2', beta: '正式版', unofficial: '非官方粉丝工具',
     save: '保存全部修改', saving: '正在保存', cancel: '取消', confirm: '确认', close: '关闭', back: '返回',
     loading: '正在载入', retry: '重试', search: '搜索', all: '全部', none: '无', add: '新增', edit: '编辑',
     delete: '删除', duplicate: '复制', level: '等级', owner: '持有者', location: '位置', status: '状态',
@@ -18,7 +18,9 @@ const zhCN = {
     gameExitTitle: '打开前请退出游戏', gameExitCopy: '关闭 Palworld 与服务器进程，避免游戏进程同时修改文件。',
     featuresTitle: '可编辑内容', featureNames: ['帕鲁与人类 NPC', '基础与成长', 'IV 与强化', '词条与技能', '工作与特殊状态', '玩家与科技'],
     featureCopy: ['新增、复制、编辑与删除对象', '物种、昵称、性别、等级与友好度', '个体潜力、浓缩与魂强化', '被动词条、技能库与装备技能', '工作适应性、治疗与特殊标记', '玩家属性、科技点与科技解锁'],
-    browseTitle: '选择存档文件夹', currentFolder: '当前文件夹', up: '上一级', useFolder: '使用此文件夹', emptyFolder: '没有可进入的子文件夹',
+    browseTitle: '选择存档文件夹', locations: '可用位置', directPath: '直接输入路径', pathPlaceholder: '例如 D:\\Palworld\\Save 或 \\\\server\\share\\Save', go: '前往',
+    currentFolder: '当前文件夹', up: '上一级', useFolder: '使用此文件夹', emptyFolder: '没有可进入的子文件夹',
+    pathInvalid: '请输入有效的绝对文件夹路径。', pathNotFound: '路径不存在，或网络位置当前不可达。', pathDenied: '没有权限访问此目录，请先在 Windows 中取得访问权限。', pathUnavailable: '无法读取此目录，请检查路径后重试。',
   },
   dashboard: {
     eyebrow: '存档概览', title: '编辑工作台', intro: '从下方入口开始编辑当前世界。所有修改将汇总到一次保存操作。',
@@ -104,7 +106,7 @@ const zhCN = {
 
 const en = {
   common: {
-    product: 'Palworld Save Studio', version: '0.4.1', beta: 'Stable', unofficial: 'Unofficial fan tool',
+    product: 'Palworld Save Studio', version: '0.4.2', beta: 'Stable', unofficial: 'Unofficial fan tool',
     save: 'Save all changes', saving: 'Saving', cancel: 'Cancel', confirm: 'Confirm', close: 'Close', back: 'Back',
     loading: 'Loading', retry: 'Retry', search: 'Search', all: 'All', none: 'None', add: 'Add', edit: 'Edit',
     delete: 'Delete', duplicate: 'Duplicate', level: 'Level', owner: 'Owner', location: 'Location', status: 'Status',
@@ -122,7 +124,9 @@ const en = {
     gameExitTitle: 'Exit the game first', gameExitCopy: 'Close Palworld and server processes before opening files.',
     featuresTitle: 'Editing features', featureNames: ['Pals & human NPCs', 'Basics & growth', 'IVs & enhancement', 'Passives & skills', 'Work & special states', 'Players & technology'],
     featureCopy: ['Create, duplicate, edit, and delete objects', 'Species, nickname, gender, level, and friendship', 'Individual potential, condensation, and souls', 'Passive traits, learned skills, and equipped skills', 'Work suitability, healing, and special flags', 'Player fields, technology points, and unlocks'],
-    browseTitle: 'Choose save folder', currentFolder: 'Current folder', up: 'Up one level', useFolder: 'Use this folder', emptyFolder: 'No subfolders to enter',
+    browseTitle: 'Choose save folder', locations: 'Available locations', directPath: 'Enter a path directly', pathPlaceholder: 'For example D:\\Palworld\\Save or \\\\server\\share\\Save', go: 'Go',
+    currentFolder: 'Current folder', up: 'Up one level', useFolder: 'Use this folder', emptyFolder: 'No subfolders to enter',
+    pathInvalid: 'Enter a valid absolute folder path.', pathNotFound: 'The path does not exist or the network location is unavailable.', pathDenied: 'Permission was denied. Connect to the location in Windows first.', pathUnavailable: 'The directory could not be read. Check the path and try again.',
   },
   dashboard: {
     eyebrow: 'Save overview', title: 'Editing workspace', intro: 'Start from an entry below. Every edit is collected into one save action.',
