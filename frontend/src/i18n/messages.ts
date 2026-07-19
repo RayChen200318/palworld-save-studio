@@ -1,6 +1,6 @@
 const zhCN = {
   common: {
-    product: 'Palworld Save Studio', version: '0.2.0-beta.1', beta: '功能开发版', unofficial: '非官方粉丝工具',
+    product: 'Palworld Save Studio', version: '0.3.0', beta: '正式版', unofficial: '非官方粉丝工具',
     save: '保存全部修改', saving: '正在保存', cancel: '取消', confirm: '确认', close: '关闭', back: '返回',
     loading: '正在载入', retry: '重试', search: '搜索', all: '全部', none: '无', add: '新增', edit: '编辑',
     delete: '删除', duplicate: '复制', level: '等级', owner: '持有者', location: '位置', status: '状态',
@@ -100,7 +100,7 @@ const zhCN = {
 
 const en = {
   common: {
-    product: 'Palworld Save Studio', version: '0.2.0-beta.1', beta: 'Development build', unofficial: 'Unofficial fan tool',
+    product: 'Palworld Save Studio', version: '0.3.0', beta: 'Stable', unofficial: 'Unofficial fan tool',
     save: 'Save all changes', saving: 'Saving', cancel: 'Cancel', confirm: 'Confirm', close: 'Close', back: 'Back',
     loading: 'Loading', retry: 'Retry', search: 'Search', all: 'All', none: 'None', add: 'Add', edit: 'Edit',
     delete: 'Delete', duplicate: 'Duplicate', level: 'Level', owner: 'Owner', location: 'Location', status: 'Status',

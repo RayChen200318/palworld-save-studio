@@ -15,8 +15,8 @@ const label = computed(() => store.locale === 'zh-CN' ? 'EN' : '中')
 </template>
 
 <style scoped>
-.language-toggle{height:36px;padding:0 11px;display:flex;align-items:center;gap:8px;border:1px solid var(--border-subtle);border-radius:10px;background:var(--surface-soft);color:var(--text-faint);font:inherit;font-size:12px;font-weight:700;cursor:pointer}
+.language-toggle{height:40px;padding:0 11px;display:flex;align-items:center;gap:8px;border:1px solid var(--border-subtle);border-radius:10px;background:var(--surface-soft);color:var(--text-faint);font:inherit;font-size:12px;font-weight:700;cursor:pointer}
 .language-toggle:hover{border-color:var(--border-bright);background:var(--surface-hover)}
-.divider{width:1px;height:12px;background:var(--border-subtle)}
+.divider{width:1px;height:14px;background:var(--border-subtle)}
 .active{color:var(--cyan-300)}
 </style>
