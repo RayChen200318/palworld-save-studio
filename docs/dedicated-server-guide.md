@@ -4,7 +4,11 @@
 
 # Dedicated Server Quick Guide
 
-This guide applies to Palworld Save Studio `0.4.2` or later.
+The dedicated-server safety workflow in this guide applies to
+`0.4.3-beta.1`. Version `0.4.2` remains the latest stable release, but it does
+not include the mandatory complete backup, concurrent source-change detection,
+or changed-file-only writes described here. Version `0.4.3-beta.1` still
+requires live PalServer acceptance and must not be treated as a stable release.
 
 Palworld Save Studio can edit an existing Palworld 1.0 dedicated-server save
 when you are the server owner, an administrator, or an authorized operator with
@@ -12,7 +16,7 @@ access to the server files. It is an offline save editor: it does not connect
 to a running server through its IP address, RCON, or the Palworld REST API.
 Regular players cannot use it to edit somebody else's server.
 
-[Download the latest Windows release](https://github.com/RayChen200318/palworld-save-studio/releases/latest)
+[Download the `0.4.3-beta.1` prerelease](https://github.com/RayChen200318/palworld-save-studio/releases/tag/0.4.3-beta.1)
 
 ## Before you begin
 
@@ -71,20 +75,27 @@ incomplete.
 
 ## Edit and return the save
 
-1. Open `Palworld-Save-Studio.exe` and choose the WorldID folder that directly
-   contains `Level.sav` and `Players`.
+1. Open `Palworld-Save-Studio.exe`, explicitly choose **Dedicated server
+   save**, and then select the WorldID folder that directly contains
+   `Level.sav` and `Players`. Do not select `0`, an archive wrapper, or another
+   nested copy of the WorldID folder.
 2. Wait for the Dashboard and player list to load, then select the correct
    player by nickname.
-3. Make the required Pal, player, or technology changes. Use the global Save
-   button, confirm the target path, and wait for Studio to finish writing and
-   reloading the save.
-4. If you edited a downloaded copy, keep the server stopped and upload the
-   edited `Level.sav` plus the complete contents of the edited `Players`
-   directory. Keep the same WorldID folder name and do not add another nested
-   WorldID folder.
-5. Do not upload `Palworld-Save-Studio-Backup`. On Linux or Docker, preserve or
+3. Make the required edits and use the global Save button. Check the WorldID,
+   backup directory, files to be written, and files verified unchanged and
+   skipped. Submission remains disabled until you confirm that PalServer is
+   fully stopped.
+4. Studio first creates a complete core-save backup under
+   `Palworld-Save-Studio-Backup/<timestamp>/`, then replaces only files with
+   real changes and reloads them for verification. A backup failure, source
+   change, or revalidation failure cannot leave a partial commit.
+5. If you edited a downloaded copy, keep the server stopped and upload only
+   the files listed under `FilesChanged`, preserving their paths relative to
+   the WorldID folder. Do not re-upload unchanged player files listed under
+   `FilesSkipped`, and do not add another nested WorldID folder.
+6. Do not upload `Palworld-Save-Studio-Backup`. On Linux or Docker, preserve or
    restore the original file owner and permissions before starting the server.
-6. Restart the server and confirm that the original world loads, existing
+7. Restart the server and confirm that the original world loads, existing
    players can join, and the intended changes are visible.
 
 If the world fails to load, the wrong world appears, or existing players are
@@ -94,10 +105,11 @@ nesting, file timestamps, and Linux permissions before trying again.
 
 ## Supported scope
 
-The dedicated-server workflow officially covers Pal, human NPC, player, and
-technology editing. Inventory and item management has currently been validated
-with a Steam local save only, so dedicated-server item editing is not claimed
-as tested or supported by this guide.
+Version `0.4.3-beta.1` has passed private-clone regression against the supplied
+pre-incident dedicated save for structure, complete backup, changed-file-only
+writes, and reload verification. It has not yet passed live PalServer startup,
+player identity and progress, in-game resave, and second-restart acceptance.
+This guide therefore does not claim live-server compatibility validation.
 
 This guide does not cover:
 

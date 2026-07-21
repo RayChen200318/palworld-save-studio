@@ -45,6 +45,9 @@ Windows 10/11 x64 and supports Steam and dedicated-server saves.
   key items from being written with invalid stacked quantities.
 - Version `0.4.2` adds navigation across available Windows drives and direct
   entry of absolute drive or UNC network-share paths in the save browser.
+- Prerelease `0.4.3-beta.1` adds an explicit dedicated-server mode, mandatory
+  complete core-save backups, source-change detection, schema validation,
+  changed-file-only writes, and refreshed item aliases, variants, and icons.
 - Keep all changes in one in-memory draft and save them to the currently opened
   world in one operation.
 
@@ -58,10 +61,10 @@ Windows 10/11 x64 and supports Steam and dedicated-server saves.
 
 ## Supported scope
 
-Version `0.4.2` supports the Windows GUI, Palworld 1.0 data, Steam saves, and
-dedicated-server saves. Item management is currently validated with a Steam
-save only; it does not claim dedicated-server item validation. Item management
-excludes base storage, world containers,
+Version `0.4.2` remains the latest stable release. Prerelease `0.4.3-beta.1`
+contains the dedicated-server protection rewrite but has not yet passed the
+required live PalServer acceptance test, so it does not claim validated
+dedicated-server editing. Item management excludes base storage, world containers,
 cross-player transfers, virtual progress records, and out-of-range values. The
 application also does not include Xbox/Game Pass, raw JSON editing, Save As,
 bulk field editing, multi-level undo, installers, update checks, telemetry,

@@ -11,7 +11,7 @@ import type { ItemCatalog, ItemContainerName, ItemSlotItem, PlayerInventory } fr
 import ItemsView from './ItemsView.vue'
 
 const item = (overrides: Partial<ItemSlotItem> = {}): ItemSlotItem => ({
-  StaticId: 'Wood', I18n: { en: 'Wood', 'zh-CN': '木材' }, IconKey: 'wood', Category: 'material',
+  StaticId: 'Wood', ManagedKind: 'normal', I18n: { en: 'Wood', 'zh-CN': '木材' }, IconKey: 'wood', Category: 'material',
   Quantity: 12, MaxStack: 9999, Rarity: 0, Variants: [], DynamicId: null, DynamicType: null,
   Durability: null, MaxDurability: 0, Ammo: null, MagazineSize: 0, PassiveSkills: [],
   EggCharacterId: null, StateFlags: [], ...overrides,
@@ -43,19 +43,19 @@ const catalog: ItemCatalog = {
       StaticId: 'Wood', BaseKey: 'Wood', I18n: { en: 'Wood', 'zh-CN': '木材' }, Category: 'material',
       TypeA: 'Material', TypeB: 'MaterialWood', EquipSlot: null, AllowedContainers: ['common'],
       Rarity: 0, Rank: 1, SortId: 1, MaxStack: 9999, DynamicType: null, MaxDurability: 0,
-      MagazineSize: 0, IconKey: 'wood',
+      MagazineSize: 0, IconKey: 'wood', ManagedKind: 'normal',
     },
     Egg_Dark: {
       StaticId: 'Egg_Dark', BaseKey: 'Egg_Dark', I18n: { en: 'Dark Egg', 'zh-CN': '暗黑蛋' }, Category: 'egg',
       TypeA: 'Consume', TypeB: 'PalEgg', EquipSlot: null, AllowedContainers: ['common'],
       Rarity: 0, Rank: 1, SortId: 2, MaxStack: 1, DynamicType: 'egg', MaxDurability: 0,
-      MagazineSize: 0, IconKey: 'egg_dark',
+      MagazineSize: 0, IconKey: 'egg_dark', ManagedKind: 'normal',
     },
     SkillUnlock_IceHorse: {
       StaticId: 'SkillUnlock_IceHorse', BaseKey: 'Frostallion_Saddle', I18n: { en: 'Frostallion Saddle', 'zh-CN': '唤冬兽的鞍具' }, Category: 'key',
       TypeA: 'Essential', TypeB: 'Essential_PalGear', EquipSlot: null, AllowedContainers: ['essential'],
       Rarity: 4, Rank: 0, SortId: 3, MaxStack: 1, DynamicType: null, MaxDurability: 0,
-      MagazineSize: 0, IconKey: 'saddle',
+      MagazineSize: 0, IconKey: 'saddle', ManagedKind: 'normal',
     },
   },
   Groups: [], EggSpecies: [
@@ -187,5 +187,24 @@ describe('ItemsView', () => {
     expect(wrapper.text()).toContain('枯星龙')
     await wrapper.get('.add-options .select-search input').setValue('Anubis')
     expect(wrapper.text()).toContain('阿努比斯')
+  })
+
+  it('renders system progress records as read-only', async () => {
+    const { wrapper, store } = await mountView()
+    store.inventory!.Containers.common.Slots[0].Item = item({
+      StaticId: 'BossDefeatReward_Test',
+      ManagedKind: 'system',
+      I18n: { en: 'BossDefeatReward_Test', 'zh-CN': 'BossDefeatReward_Test' },
+      StateFlags: ['system-managed'],
+    })
+    store.selectSlot(0)
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.text()).toContain('系统记录')
+    expect(wrapper.find('.system-card').exists()).toBe(true)
+    expect(wrapper.find('.detail-fields').exists()).toBe(false)
+    expect(wrapper.find('.move-block').exists()).toBe(false)
+    expect(wrapper.find('.delete-button').exists()).toBe(false)
+    expect(wrapper.findAll('.item-slot')[0].attributes('draggable')).toBe('false')
   })
 })

@@ -7,8 +7,11 @@ from flask import Blueprint, request
 from flask_jwt_extended import jwt_required
 
 from palworld_save_studio.core import SaveManager
-from palworld_save_studio.core.item_inventory import ItemInventoryError
-from palworld_save_studio.utils import DataProvider, LOGGER
+from palworld_save_studio.core.item_inventory import (
+    ItemInventoryError,
+    ItemInventoryService,
+)
+from palworld_save_studio.utils import LOGGER
 from palworld_save_studio.utils.util import reply
 
 
@@ -43,29 +46,7 @@ def _mutate(operation: Callable[[], dict[str, Any]]):
 @jwt_required()
 def get_catalog():
     try:
-        if SaveManager().item_inventory:
-            return reply(0, SaveManager().item_inventory.catalog())
-        data = DataProvider.get_item_catalog()
-        species = []
-        for pal in DataProvider.get_sorted_pals():
-            key = pal["InternalName"]
-            if DataProvider.is_editable_species(key) and not DataProvider.is_pal_human(key):
-                species.append(
-                    {
-                        "CharacterId": key,
-                        "I18n": pal["I18n"],
-                        "IconAccessKey": key,
-                    }
-                )
-        return reply(
-            0,
-            {
-                "Source": data["Source"],
-                "Items": data["Items"],
-                "Groups": data["Groups"],
-                "EggSpecies": species,
-            },
-        )
+        return reply(0, ItemInventoryService.catalog())
     except Exception:
         LOGGER.error(f"Item catalog failed: {traceback.format_exc()}")
         return reply(1, msg="The offline item catalog could not be loaded."), 500

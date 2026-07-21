@@ -1,8 +1,8 @@
 """Generate the offline Palworld 1.0 item catalog used by Save Studio.
 
-The structural item metadata is pinned to a known Palworld Save Pal snapshot.
-English/Chinese display names and icons are matched from the public PalDB item
-lists.  The application never contacts either source at runtime.
+The structural metadata and icon identities are pinned to a reviewed Palworld
+Save Pal snapshot. English/Chinese display names are matched from the public
+PalDB item lists. The application never contacts either source at runtime.
 """
 
 from __future__ import annotations
@@ -19,7 +19,7 @@ import requests
 from bs4 import BeautifulSoup
 
 
-METADATA_COMMIT = "d8907c4adfd4e9cae471e49b1c4bf5359f89402d"
+METADATA_COMMIT = "0d99b04acba369ec88550d122794b9917bbf820e"
 METADATA_URL = (
     "https://raw.githubusercontent.com/oMaN-Rod/palworld-save-pal/"
     f"{METADATA_COMMIT}/data/json/items.json"
@@ -28,6 +28,10 @@ PALDB_URLS = {
     "en": "https://paldb.cc/en/Items",
     "zh-CN": "https://paldb.cc/cn/Items",
 }
+UPSTREAM_ICON_BASE = (
+    "https://raw.githubusercontent.com/oMaN-Rod/palworld-save-pal/"
+    f"{METADATA_COMMIT}/ui/src/lib/assets/img"
+)
 HTTP_HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -133,6 +137,27 @@ def _icon_key(url: str) -> str:
     return Path(urlparse(url).path).stem
 
 
+def _localized_name(value: str, *, fallback: str, locale: str) -> str:
+    cleaned = (value or "").strip()
+    placeholders = {
+        "zh-hans text",
+        "zh-cn text",
+        "chinese text",
+        "en text",
+        "english text",
+        f"{locale.casefold()} text",
+    }
+    return fallback if not cleaned or cleaned.casefold() in placeholders else cleaned
+
+
+def _localization_score(item: dict[str, Any]) -> int:
+    return sum(
+        bool(value and value.casefold() != item["I18n"]["en"].casefold())
+        for locale, value in item["I18n"].items()
+        if locale != "en"
+    )
+
+
 def build_catalog(
     metadata: dict[str, dict[str, Any]],
     english_html: str,
@@ -140,6 +165,12 @@ def build_catalog(
 ) -> tuple[dict[str, Any], dict[str, str]]:
     english_by_id, english_by_href = _parse_list(english_html)
     chinese_by_id, chinese_by_href = _parse_list(chinese_html)
+    paldb_icon_keys = {
+        _icon_key(entry["IconUrl"]).casefold(): _icon_key(entry["IconUrl"])
+        for entries in (english_by_id, chinese_by_id)
+        for entry in entries.values()
+        if entry.get("IconUrl")
+    }
     items: dict[str, dict[str, Any]] = {}
     icon_urls: dict[str, str] = {}
 
@@ -153,16 +184,23 @@ def build_catalog(
         chinese = chinese or chinese_by_href.get(href)
         if not english or not chinese:
             raise RuntimeError(f"Missing PalDB localization for {static_id}")
-        icon_url = english.get("IconUrl") or chinese.get("IconUrl")
-        if not icon_url:
-            raise RuntimeError(f"Missing PalDB icon for {static_id}")
+        metadata_icon = str(source.get("icon") or "").strip()
+        if not metadata_icon:
+            raise RuntimeError(f"Missing upstream icon metadata for {static_id}")
         dynamic = source.get("dynamic") or {}
-        icon_key = _icon_key(icon_url)
+        icon_key = paldb_icon_keys.get(metadata_icon.casefold(), metadata_icon)
+        icon_url = f"{UPSTREAM_ICON_BASE}/{metadata_icon}.webp"
         icon_urls[icon_key] = icon_url
+        english_name = _localized_name(
+            english["Name"], fallback=static_id, locale="en"
+        )
+        chinese_name = _localized_name(
+            chinese["Name"], fallback=english_name, locale="zh-CN"
+        )
         items[static_id] = {
             "StaticId": static_id,
             "BaseKey": href or static_id,
-            "I18n": {"en": english["Name"], "zh-CN": chinese["Name"]},
+            "I18n": {"en": english_name, "zh-CN": chinese_name},
             "Category": _category(source),
             "TypeA": source.get("type_a", ""),
             "TypeB": source.get("type_b", ""),
@@ -186,20 +224,45 @@ def build_catalog(
     groups = []
     for base_key, variants in grouped.items():
         variants.sort(key=lambda item: (item["Rarity"], item["Rank"], item["StaticId"]))
-        representative = variants[0]
+        representative = sorted(
+            variants,
+            key=lambda item: (
+                -_localization_score(item),
+                item["Rarity"],
+                item["Rank"],
+                item["StaticId"],
+            ),
+        )[0]
+        search_terms = list(
+            dict.fromkeys(
+                [
+                    base_key,
+                    *[item["StaticId"] for item in variants],
+                    *[
+                        localized
+                        for item in variants
+                        for localized in item["I18n"].values()
+                    ],
+                ]
+            )
+        )
         groups.append(
             {
                 "BaseKey": base_key,
                 "I18n": representative["I18n"],
                 "Category": representative["Category"],
                 "IconKey": representative["IconKey"],
+                "RepresentativeStaticId": representative["StaticId"],
                 "Variants": [item["StaticId"] for item in variants],
+                "SearchTerms": search_terms,
+                "ManagedKind": "normal",
             }
         )
     groups.sort(key=lambda group: (items[group["Variants"][0]]["SortId"], group["BaseKey"]))
     return {
         "Source": {
             "PalworldSavePalCommit": METADATA_COMMIT,
+            "PalworldSavePalIcons": UPSTREAM_ICON_BASE,
             "PalDB": PALDB_URLS,
         },
         "Items": dict(sorted(items.items())),
@@ -209,13 +272,19 @@ def build_catalog(
 
 def _download_icon(target: Path, url: str) -> None:
     if target.exists():
+        data = target.read_bytes()
+        if data[:4] != b"RIFF" or data[8:12] != b"WEBP":
+            raise RuntimeError(f"Existing icon is not WebP: {target}")
         return
     last_error: Exception | None = None
     for attempt in range(5):
         try:
             response = requests.get(url, headers=HTTP_HEADERS, timeout=60)
             response.raise_for_status()
-            target.write_bytes(response.content)
+            data = response.content
+            if data[:4] != b"RIFF" or data[8:12] != b"WEBP":
+                raise RuntimeError(f"Downloaded icon is not WebP: {url}")
+            target.write_bytes(data)
             return
         except requests.RequestException as exc:
             last_error = exc

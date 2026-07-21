@@ -19,13 +19,20 @@ from palworld_save_studio.core.player_entity import PlayerEntity
 from palworld_save_studio.core.pal_entity import PalEntity
 from palworld_save_studio.utils import LOGGER, alphanumeric_key
 from palworld_save_studio.core.group_data import GroupData
-from palworld_save_studio.config import Config
+from palworld_save_studio.config import Config, VERSION
 from palworld_save_studio.core.save_transaction import (
     BACKUP_FOLDER_NAME,
     SaveTransactionError,
+    capture_source_manifest,
+    core_save_paths,
     replace_staged_files,
+    source_manifest_matches,
 )
 from palworld_save_studio.core.item_inventory import ItemInventoryService
+from palworld_save_studio.core.save_schema import (
+    SaveSchemaError,
+    validate_editable_schema,
+)
 
 
 def skip_decode(reader: FArchiveReader, type_name: str, size: int, path: str):
@@ -170,9 +177,55 @@ class SaveManager:
             self._loaded = False
             self._dirty_revision = 0
             self._last_commit: dict[str, Any] | None = None
+            self._save_kind = "local"
+            self._source_manifest: dict[str, dict[str, Any]] = {}
+            self._source_verified = False
 
-    def open(self, file_path: str, *, reset_session: bool = True) -> Optional[GvasFile]:
+    @staticmethod
+    def _validate_save_root(path: Path, save_kind: str) -> None:
+        if save_kind not in {"local", "dedicated"}:
+            raise SaveTransactionError("SaveKind must be 'local' or 'dedicated'.")
+        if save_kind != "dedicated":
+            return
+        if (path / "Level.sav").is_file() and (path / "Players").is_dir():
+            return
+
+        nested_worlds: list[Path] = []
+        if path.is_dir():
+            for child in path.iterdir():
+                if not child.is_dir():
+                    continue
+                if (child / "Level.sav").is_file() and (child / "Players").is_dir():
+                    nested_worlds.append(child)
+                    continue
+                for grandchild in child.iterdir():
+                    if (
+                        grandchild.is_dir()
+                        and (grandchild / "Level.sav").is_file()
+                        and (grandchild / "Players").is_dir()
+                    ):
+                        nested_worlds.append(grandchild)
+        if len(nested_worlds) == 1:
+            raise SaveTransactionError(
+                "Select the WorldID folder directly, not its parent. The correct folder is: "
+                f"{nested_worlds[0]}"
+            )
+        raise SaveTransactionError(
+            "A dedicated-server WorldID folder must directly contain Level.sav and Players. "
+            "Example: <WorldID>/Level.sav and <WorldID>/Players/."
+        )
+
+    def open(
+        self,
+        file_path: str,
+        *,
+        save_kind: str | None = None,
+        reset_session: bool = True,
+    ) -> Optional[GvasFile]:
+        selected_kind = save_kind or self._save_kind
         self._file_path = Path(file_path).resolve()
+        self._validate_save_root(self._file_path, selected_kind)
+        self._save_kind = selected_kind
 
         level_sav_path = self._file_path / "Level.sav"
 
@@ -247,6 +300,8 @@ class SaveManager:
 
             LOGGER.info("Done")
         self._loaded = True
+        self._source_manifest = capture_source_manifest(self._file_path)
+        self._source_verified = True
         if reset_session:
             self._dirty_revision = 0
             self._last_commit = None
@@ -311,6 +366,9 @@ class SaveManager:
                 "_loaded",
                 "_dirty_revision",
                 "_last_commit",
+                "_save_kind",
+                "_source_manifest",
+                "_source_verified",
             )
         }
 
@@ -326,6 +384,8 @@ class SaveManager:
                     "id": str(player.PlayerUId),
                     "nickname": player.NickName or "",
                     "level": player.Level or 1,
+                    "exp": player.Exp,
+                    "unused_status_points": player.UnusedStatusPoint,
                     "technology_points": player.TechnologyPoint or 0,
                     "boss_technology_points": player.bossTechnologyPoint or 0,
                     "technology": sorted(player.UnlockedRecipeTechnologyNames or []),
@@ -342,6 +402,7 @@ class SaveManager:
                     "nickname": pal.NickName or "",
                     "gender": pal.Gender.value if pal.Gender else None,
                     "level": pal.Level or 1,
+                    "exp": pal.Exp,
                     "friendship": pal.FriendshipLevel or 0,
                     "rank": pal.Rank or 1,
                     "soul": [
@@ -387,19 +448,122 @@ class SaveManager:
             "items": self.item_inventory.semantic_snapshot() if self.item_inventory else None,
         }
 
-    def commit(self) -> dict[str, Any]:
+    @staticmethod
+    def _raw_save_bytes(path: Path) -> bytes:
+        raw_gvas, _ = decompress_sav_to_gvas(path.read_bytes(), debug=Config.debug)
+        return raw_gvas
+
+    def _partition_staged_files(
+        self, staged_root: Path, paths: list[Path]
+    ) -> tuple[list[Path], list[Path]]:
+        if self._file_path is None:
+            raise SaveTransactionError("No loaded save is available.")
+        changed: list[Path] = []
+        skipped: list[Path] = []
+        for relative_path in paths:
+            source = self._file_path / relative_path
+            staged = staged_root / relative_path
+            if source.is_file() and self._raw_save_bytes(source) == self._raw_save_bytes(staged):
+                skipped.append(relative_path)
+            else:
+                changed.append(relative_path)
+        return changed, skipped
+
+    def _reported_skipped_paths(
+        self, changed: list[Path], serialized_skipped: list[Path]
+    ) -> list[Path]:
+        if self._file_path is None or self._save_kind != "dedicated":
+            return list(serialized_skipped)
+        changed_set = set(changed)
+        return [
+            relative_path
+            for relative_path in core_save_paths(self._file_path)
+            if relative_path not in changed_set
+        ]
+
+    def _validate_before_commit(self) -> None:
+        try:
+            validate_editable_schema(self)
+        except (SaveSchemaError, ValueError, KeyError, TypeError) as exc:
+            raise SaveTransactionError(f"Save structure validation failed: {exc}") from exc
+
+    def _prepare_staged_commit(
+        self, transaction_root: Path
+    ) -> tuple[Path, list[Path], list[Path]]:
+        staged_root = transaction_root / "staged"
+        paths = self._serialize_to(staged_root)
+        self._validate_staged_files(staged_root, paths)
+        changed, skipped = self._partition_staged_files(staged_root, paths)
+        return staged_root, changed, skipped
+
+    def _verify_source_unchanged(self) -> None:
+        if self._file_path is None:
+            raise SaveTransactionError("No save is loaded.")
+        self._source_verified = source_manifest_matches(
+            self._file_path, self._source_manifest
+        )
+        if not self._source_verified:
+            raise SaveTransactionError(
+                "The save changed on disk after it was opened. No files were written; reload the save before editing again."
+            )
+
+    def commit_preview(self) -> dict[str, Any]:
+        if not self._loaded or self._file_path is None:
+            raise SaveTransactionError("No save is loaded.")
+        self._verify_source_unchanged()
+        self._validate_before_commit()
+        if self._dirty_revision == 0:
+            return {
+                "SourceVerified": True,
+                "FilesChanged": [],
+                "FilesSkipped": [],
+                "BackupPath": str(self._file_path / BACKUP_FOLDER_NAME),
+                "WorldId": self._file_path.name,
+            }
+
+        transaction_root = Path(
+            tempfile.mkdtemp(
+                prefix=".palworld-save-studio-preview-",
+                dir=self._file_path.parent,
+            )
+        )
+        try:
+            _, changed, skipped = self._prepare_staged_commit(transaction_root)
+            skipped = self._reported_skipped_paths(changed, skipped)
+            return {
+                "SourceVerified": True,
+                "FilesChanged": [path.as_posix() for path in changed],
+                "FilesSkipped": [path.as_posix() for path in skipped],
+                "BackupPath": str(self._file_path / BACKUP_FOLDER_NAME),
+                "WorldId": self._file_path.name,
+            }
+        finally:
+            import shutil
+
+            shutil.rmtree(transaction_root, ignore_errors=True)
+
+    def commit(self, *, server_stopped_confirmed: bool = False) -> dict[str, Any]:
         if not self._loaded or self._file_path is None:
             raise SaveTransactionError("No save is loaded.")
         if not self._file_path.is_dir():
             raise SaveTransactionError(f"Loaded path is unavailable: {self._file_path}")
+        if self._save_kind == "dedicated" and server_stopped_confirmed is not True:
+            raise SaveTransactionError(
+                "Confirm that PalServer is fully stopped before saving a dedicated-server world."
+            )
+        self._verify_source_unchanged()
         if self._dirty_revision == 0:
             return {
                 "Verified": True,
                 "FilesWritten": 0,
+                "SourceVerified": self._source_verified,
+                "FilesChanged": [],
+                "FilesSkipped": [],
                 "BackupPath": None,
                 "Revision": 0,
             }
 
+        self._validate_before_commit()
         intended_snapshot = self._semantic_snapshot()
         runtime_state = self._capture_runtime_state()
         transaction_root = Path(
@@ -408,23 +572,76 @@ class SaveManager:
                 dir=self._file_path.parent,
             )
         )
-        staged_root = transaction_root / "staged"
         try:
-            paths = self._serialize_to(staged_root)
-            self._validate_staged_files(staged_root, paths)
+            staged_root, changed, skipped = self._prepare_staged_commit(
+                transaction_root
+            )
+            skipped = self._reported_skipped_paths(changed, skipped)
+
+            if not changed:
+                backup_path = None
+                if self._save_kind == "dedicated":
+                    backup_result = replace_staged_files(
+                        save_root=self._file_path,
+                        staged_root=staged_root,
+                        transaction_root=transaction_root,
+                        relative_paths=(),
+                        backup_enabled=True,
+                        verify=lambda: True,
+                        backup_paths=core_save_paths(self._file_path),
+                        backup_metadata={
+                            "StudioVersion": VERSION,
+                            "SaveKind": self._save_kind,
+                            "WorldId": self._file_path.name,
+                        },
+                        files_skipped=skipped,
+                        pre_write_check=lambda: source_manifest_matches(
+                            self._file_path, self._source_manifest
+                        ),
+                    )
+                    backup_path = backup_result.backup_path
+                self._dirty_revision = 0
+                self._last_commit = {
+                    "Verified": True,
+                    "FilesWritten": 0,
+                    "SourceVerified": True,
+                    "FilesChanged": [],
+                    "FilesSkipped": [path.as_posix() for path in skipped],
+                    "BackupPath": backup_path,
+                    "Revision": 0,
+                }
+                return dict(self._last_commit)
 
             def verify() -> bool:
-                if not self.open(str(self._file_path), reset_session=False):
+                if not self.open(
+                    str(self._file_path),
+                    save_kind=self._save_kind,
+                    reset_session=False,
+                ):
                     return False
+                self._validate_before_commit()
                 return self._semantic_snapshot() == intended_snapshot
 
+            backup_required = self._save_kind == "dedicated"
             result = replace_staged_files(
                 save_root=self._file_path,
                 staged_root=staged_root,
                 transaction_root=transaction_root,
-                relative_paths=paths,
-                backup_enabled=Config.backup_enabled,
+                relative_paths=changed,
+                backup_enabled=backup_required or Config.backup_enabled,
                 verify=verify,
+                backup_paths=(
+                    core_save_paths(self._file_path) if backup_required else changed
+                ),
+                backup_metadata={
+                    "StudioVersion": VERSION,
+                    "SaveKind": self._save_kind,
+                    "WorldId": self._file_path.name,
+                },
+                files_skipped=skipped,
+                pre_write_check=lambda: source_manifest_matches(
+                    self._file_path, self._source_manifest
+                ),
             )
         except Exception:
             self._restore_runtime_state(runtime_state)
@@ -438,6 +655,9 @@ class SaveManager:
         self._last_commit = {
             "Verified": result.verified,
             "FilesWritten": result.files_written,
+            "SourceVerified": result.source_verified,
+            "FilesChanged": list(result.files_changed),
+            "FilesSkipped": list(result.files_skipped),
             "BackupPath": result.backup_path,
             "Revision": 0,
         }
@@ -462,8 +682,24 @@ class SaveManager:
         if player_entity.PlayerGVAS is None:
             return False
 
-        player_entity.save_new_pal_records()
-        gvas_file, save_type = player_entity.PlayerGVAS
+        save_data_backup = copy.deepcopy(player_entity._player_save_data)
+        new_palbox_backup = dict(player_entity._new_palbox)
+        new_pal_flags = {
+            key: pal.is_new_pal for key, pal in player_entity._new_palbox.items()
+        }
+        try:
+            player_entity.save_new_pal_records()
+            gvas_file, save_type = player_entity.PlayerGVAS
+            player_gvas_file = copy.deepcopy(gvas_file)
+        finally:
+            player_entity._player_save_data.clear()
+            player_entity._player_save_data.update(save_data_backup)
+            player_entity._new_palbox.clear()
+            player_entity._new_palbox.update(new_palbox_backup)
+            for key, is_new in new_pal_flags.items():
+                if key in player_entity._new_palbox:
+                    player_entity._new_palbox[key].is_new_pal = is_new
+
         output_path = (save_path or self._file_path) / "Players"
         if not output_path.exists() and output_path.parent.exists():
             LOGGER.warning(f"Player path does not exist: {output_path}")
@@ -473,7 +709,6 @@ class SaveManager:
         player_path: Path = output_path / f"{UUID2HexStr(player_entity.PlayerUId)}.sav"
 
         LOGGER.info(f"Compressing Player {player_entity} GVAS file")
-        player_gvas_file = copy.deepcopy(gvas_file)
         sav_data = compress_gvas_to_sav(
             player_gvas_file.write(PLAYER_SKIP_PROPERTIES),
             save_type,
@@ -667,7 +902,11 @@ class SaveManager:
             return False
         state = self._capture_runtime_state()
         try:
-            if self.open(str(self._file_path), reset_session=True):
+            if self.open(
+                str(self._file_path),
+                save_kind=self._save_kind,
+                reset_session=True,
+            ):
                 return True
         except Exception:
             LOGGER.error(f"Failed discarding draft: {traceback.format_exc()}")
@@ -688,9 +927,14 @@ class SaveManager:
             for context in contexts
         )
         loaded_path = str(self._file_path) if self._file_path else Config.path
+        backup_required = self._save_kind == "dedicated"
         return {
             "Path": loaded_path,
             "Loaded": self._loaded,
+            "SaveKind": self._save_kind,
+            "WorldId": self._file_path.name if self._file_path else None,
+            "BackupRequired": backup_required,
+            "SourceVerified": self._source_verified,
             "DirtyRevision": self._dirty_revision,
             "Dirty": self._dirty_revision > 0,
             "Statistics": {
@@ -700,7 +944,7 @@ class SaveManager:
                 "Anomalies": anomaly_count,
                 "Objects": len(contexts),
             },
-            "BackupEnabled": Config.backup_enabled,
+            "BackupEnabled": backup_required or Config.backup_enabled,
             "BackupPath": (
                 str(Path(loaded_path) / BACKUP_FOLDER_NAME) if loaded_path else None
             ),

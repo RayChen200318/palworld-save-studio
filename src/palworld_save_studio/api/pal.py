@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+from contextlib import contextmanager
+import copy
 import json
 import traceback
-from typing import Any
+from typing import Any, Iterator
 
 from flask import Blueprint, request
 from flask_jwt_extended import jwt_required
@@ -18,6 +20,17 @@ from palworld_save_studio.utils.util import reply
 
 
 pal_blueprint = Blueprint("pal", __name__)
+
+
+@contextmanager
+def _atomic_pal(pal: PalEntity) -> Iterator[None]:
+    parameter_backup = copy.deepcopy(pal._pal_param)
+    try:
+        yield
+    except Exception:
+        pal._pal_param.clear()
+        pal._pal_param.update(parameter_backup)
+        raise
 
 
 def _context(instance_id: str) -> dict[str, Any] | None:
@@ -192,7 +205,8 @@ def patch_pal(instance_id: str):
         return reply(1, msg=f"Pal {instance_id} was not found."), 404
     try:
         changes = validate_pal_changes(context["pal"], (request.get_json(silent=True) or {}).get("changes"))
-        _apply_changes(context["pal"], changes)
+        with _atomic_pal(context["pal"]):
+            _apply_changes(context["pal"], changes)
         revision = SaveManager().mark_dirty()
         refreshed = SaveManager().get_pal_context(instance_id)
         return reply(0, {"Pal": _pal_data(refreshed), "DirtyRevision": revision})

@@ -37,6 +37,15 @@ PAL_EXP_TABLE: list[int] = load_json("pal_exp_table.json")
 PAL_FRIENDSHIP: dict[str, dict] = load_json("pal_friendship.json")
 TECH_DATA: dict[str, dict] = load_json("tech_data.json")
 ITEM_DATA: dict[str, Any] = load_json("item_data.json")
+ITEM_CASEFOLD_INDEX: dict[str, str] = {}
+for _item_static_id in ITEM_DATA["Items"]:
+    _folded = _item_static_id.casefold()
+    if _folded in ITEM_CASEFOLD_INDEX:
+        raise RuntimeError(
+            "The item catalog contains a case-insensitive StaticId collision: "
+            f"{ITEM_CASEFOLD_INDEX[_folded]} / {_item_static_id}"
+        )
+    ITEM_CASEFOLD_INDEX[_folded] = _item_static_id
 
 # PAL_ICONS: dict[str] = load_icons("pals")
 
@@ -375,7 +384,26 @@ class DataProvider:
 
     @staticmethod
     def get_item_data(static_id: str) -> Optional[dict[str, Any]]:
-        return ITEM_DATA["Items"].get(static_id)
+        if not isinstance(static_id, str):
+            return None
+        item = ITEM_DATA["Items"].get(static_id)
+        if item is not None:
+            return item
+        canonical = ITEM_CASEFOLD_INDEX.get(static_id.casefold())
+        return ITEM_DATA["Items"].get(canonical) if canonical else None
+
+    @staticmethod
+    def resolve_item_static_id(static_id: str) -> Optional[str]:
+        item = DataProvider.get_item_data(static_id)
+        return item["StaticId"] if item else None
+
+    @staticmethod
+    def get_item_managed_kind(static_id: str) -> str:
+        if isinstance(static_id, str) and static_id.casefold().startswith(
+            "bossdefeatreward_".casefold()
+        ):
+            return "system"
+        return "normal"
 
     @staticmethod
     def get_item_groups() -> list[dict[str, Any]]:

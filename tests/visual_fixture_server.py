@@ -221,13 +221,15 @@ def pal_detail(item):
 
 
 def session():
-    return {"Path": r"C:\Users\Ray\AppData\Local\Pal\Saved\SaveGames\7656119\A62F18C9", "Loaded": True, "DirtyRevision": revision, "Dirty": revision > 0,
+    return {"Path": r"C:\Users\Ray\AppData\Local\Pal\Saved\SaveGames\7656119\A62F18C9", "Loaded": True,
+            "SaveKind": "local", "WorldId": "A62F18C9", "BackupRequired": False, "SourceVerified": True,
+            "DirtyRevision": revision, "Dirty": revision > 0,
             "Statistics": {"Players": 3, "Pals": 218, "Humans": 22, "Anomalies": 60, "Objects": 240},
             "BackupEnabled": True, "BackupPath": r"C:\Fixture\Palworld-Save-Studio-Backup", "LastCommit": None}
 
 
 @app.route("/api/save/fetch_config")
-def config(): return ok({"I18n": "zh-CN", "I18nList": {"zh-CN": "简体中文", "en": "English"}, "Path": session()["Path"], "HasPassword": False, "VERSION": "0.4.2", "IsOfficialBuild": False, "BackupEnabled": True})
+def config(): return ok({"I18n": "zh-CN", "I18nList": {"zh-CN": "简体中文", "en": "English"}, "Path": session()["Path"], "HasPassword": False, "VERSION": "0.4.3-beta.1", "IsOfficialBuild": False, "BackupEnabled": True})
 
 
 @app.route("/api/auth/login", methods=["POST"])

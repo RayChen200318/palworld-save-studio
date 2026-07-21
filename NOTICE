@@ -15,8 +15,9 @@ https://github.com/RayChen200318/Palworld-Pal-Editor-1.0
 
 The offline item catalog uses formal Palworld item metadata from
 oMaN-Rod/palworld-save-pal at commit
-d8907c4adfd4e9cae471e49b1c4bf5359f89402d, with English and Chinese
-display names and item icon references matched from PalDB Items:
+0d99b04acba369ec88550d122794b9917bbf820e. Item icon identities and WebP
+assets come from that pinned source; English and Chinese display names are
+matched from PalDB Items:
 https://github.com/oMaN-Rod/palworld-save-pal
 https://paldb.cc/en/Items
 https://paldb.cc/cn/Items

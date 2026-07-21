@@ -17,9 +17,15 @@ class ReleaseMetadataTests(unittest.TestCase):
         with (ROOT / "frontend" / "package.json").open(encoding="utf-8") as file:
             frontend_version = json.load(file)["version"]
 
-        self.assertEqual(VERSION, "0.4.2")
-        self.assertEqual(project_version, VERSION)
+        self.assertEqual(VERSION, "0.4.3-beta.1")
+        self.assertEqual(project_version, "0.4.3b1")
         self.assertEqual(frontend_version, VERSION)
+
+    def test_beta_release_workflow_marks_hyphenated_tags_as_prerelease(self) -> None:
+        workflow = (ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8")
+        self.assertIn("$env:GITHUB_REF_NAME -match '-'", workflow)
+        self.assertIn("--prerelease", workflow)
+        self.assertIn("0.4.2 remains the latest stable release", workflow)
 
     def test_desktop_server_is_loopback_only(self) -> None:
         self.assertEqual(SERVER_HOST, "127.0.0.1")

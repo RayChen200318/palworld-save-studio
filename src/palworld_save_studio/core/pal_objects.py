@@ -117,6 +117,20 @@ class PalObjects:
         return {"id": None, "type": "IntProperty", "value": value}
 
     @staticmethod
+    def UInt16Property(value: int):
+        if (
+            not isinstance(value, int)
+            or isinstance(value, bool)
+            or value < PalObjects.UInt16Min
+            or value > PalObjects.UInt16Max
+        ):
+            raise ValueError(
+                f"UInt16Property value must be between {PalObjects.UInt16Min} "
+                f"and {PalObjects.UInt16Max}."
+            )
+        return {"id": None, "type": "UInt16Property", "value": value}
+
+    @staticmethod
     def Int64Property(value: int):
         return {"id": None, "type": "Int64Property", "value": value}
 

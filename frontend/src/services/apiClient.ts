@@ -1,6 +1,7 @@
 import type {
   ActiveSkill,
   CommitResult,
+  CommitPreview,
   ItemCatalog,
   ItemContainerName,
   ItemMutationResult,
@@ -13,6 +14,7 @@ import type {
   PlayerInventory,
   PlayerSummary,
   SaveConfig,
+  SaveKind,
   SaveSession,
   TechnologyItem,
 } from '@/types/domain'
@@ -77,10 +79,10 @@ export class ApiClient {
     return this.request<SaveSession>('/save/session')
   }
 
-  loadSave(readPath: string): Promise<SaveSession> {
+  loadSave(readPath: string, saveKind: SaveKind): Promise<SaveSession> {
     return this.request<SaveSession>('/save/load', {
       method: 'POST',
-      body: JSON.stringify({ ReadPath: readPath }),
+      body: JSON.stringify({ ReadPath: readPath, SaveKind: saveKind }),
     })
   }
 
@@ -88,8 +90,15 @@ export class ApiClient {
     return this.request<SaveSession>('/save/discard', { method: 'POST' })
   }
 
-  commitDraft(): Promise<{ Commit: CommitResult; Session: SaveSession }> {
-    return this.request('/save/commit', { method: 'POST' })
+  previewCommit(): Promise<CommitPreview> {
+    return this.request('/save/commit-preview')
+  }
+
+  commitDraft(serverStoppedConfirmed = false): Promise<{ Commit: CommitResult; Session: SaveSession }> {
+    return this.request('/save/commit', {
+      method: 'POST',
+      body: JSON.stringify({ ServerStoppedConfirmed: serverStoppedConfirmed }),
+    })
   }
 
   updateBackupSetting(enabled: boolean): Promise<SaveSession> {

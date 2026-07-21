@@ -59,4 +59,22 @@ describe('ApiClient', () => {
     )
     expect(fetcher.mock.calls[0][1].body).toContain('"SlotIndex":2')
   })
+
+  it('sends the explicit save kind and dedicated stop confirmation', async () => {
+    const fetcher = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ status: 0, data: {} }),
+    })
+    const client = new ApiClient('/api', fetcher)
+    await client.loadSave('D:\\WorldId', 'dedicated')
+    await client.commitDraft(true)
+
+    expect(fetcher.mock.calls[0][1].body).toBe(
+      JSON.stringify({ ReadPath: 'D:\\WorldId', SaveKind: 'dedicated' }),
+    )
+    expect(fetcher.mock.calls[1][1].body).toBe(
+      JSON.stringify({ ServerStoppedConfirmed: true }),
+    )
+  })
 })
