@@ -1,12 +1,16 @@
 import { defineStore } from 'pinia'
 import { apiClient } from '@/services/apiClient'
-import type { Locale, SaveConfig, SaveSession } from '@/types/domain'
+import type { CommitPreview, Locale, SaveConfig, SaveKind, SaveSession } from '@/types/domain'
 
 let bootstrapRequest: Promise<void> | null = null
 
 const emptySession = (): SaveSession => ({
   Path: null,
   Loaded: false,
+  SaveKind: 'local',
+  WorldId: null,
+  BackupRequired: false,
+  SourceVerified: false,
   DirtyRevision: 0,
   Dirty: false,
   Statistics: { Players: 0, Pals: 0, Humans: 0, Anomalies: 0, Objects: 0 },
@@ -70,11 +74,11 @@ export const useSessionStore = defineStore('session', {
     async toggleLocale() {
       await this.setLocale(this.locale === 'zh-CN' ? 'en' : 'zh-CN')
     },
-    async loadSave(path: string) {
+    async loadSave(path: string, saveKind: SaveKind) {
       this.busy = true
       this.error = ''
       try {
-        this.session = await apiClient.loadSave(path)
+        this.session = await apiClient.loadSave(path, saveKind)
         return true
       } catch (error) {
         this.error = error instanceof Error ? error.message : String(error)
@@ -91,11 +95,20 @@ export const useSessionStore = defineStore('session', {
         this.busy = false
       }
     },
-    async commitDraft() {
+    async previewCommit(): Promise<CommitPreview> {
+      this.error = ''
+      try {
+        return await apiClient.previewCommit()
+      } catch (error) {
+        this.error = error instanceof Error ? error.message : String(error)
+        throw error
+      }
+    },
+    async commitDraft(serverStoppedConfirmed = false) {
       this.busy = true
       this.error = ''
       try {
-        const result = await apiClient.commitDraft()
+        const result = await apiClient.commitDraft(serverStoppedConfirmed)
         this.session = result.Session
         return result.Commit
       } catch (error) {

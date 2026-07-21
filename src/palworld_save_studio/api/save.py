@@ -60,7 +60,11 @@ def fetch_config():
 # @LOGGER.api_logger
 @jwt_required()
 def load():
-    path = (request.get_json(silent=True) or {}).get("ReadPath", None)
+    payload = request.get_json(silent=True) or {}
+    path = payload.get("ReadPath", None)
+    save_kind = payload.get("SaveKind")
+    if save_kind not in {"local", "dedicated"}:
+        return reply(1, msg="SaveKind must be 'local' or 'dedicated'."), 400
     path = path or Config.path
     manager = SaveManager()
     if manager.has_draft:
@@ -70,10 +74,14 @@ def load():
         ), 409
     state = manager._capture_runtime_state()
     try:
-        if path and manager.open(path):
+        if path and manager.open(path, save_kind=save_kind):
             Config.path = str(Path(path).resolve())
             Config.save_to_file()
             return reply(0, manager.session_summary())
+    except SaveTransactionError as exc:
+        LOGGER.error(f"Rejected save structure: {traceback.format_exc()}")
+        manager._restore_runtime_state(state)
+        return reply(1, msg=str(exc)), 400
     except Exception:
         stack_trace = traceback.format_exc()
         LOGGER.error(f"Error Loading Save {stack_trace}")
@@ -106,7 +114,10 @@ def discard():
 @jwt_required()
 def commit():
     try:
-        result = SaveManager().commit()
+        payload = request.get_json(silent=True) or {}
+        result = SaveManager().commit(
+            server_stopped_confirmed=payload.get("ServerStoppedConfirmed") is True
+        )
         return reply(0, {"Commit": result, "Session": SaveManager().session_summary()})
     except SaveTransactionError as exc:
         LOGGER.error(f"Save commit failed: {traceback.format_exc()}")
@@ -117,6 +128,19 @@ def commit():
         return reply(1, msg="The save could not be committed."), 500
 
 
+@save_blueprint.route("/commit-preview", methods=["GET"])
+@jwt_required()
+def commit_preview():
+    try:
+        return reply(0, SaveManager().commit_preview())
+    except SaveTransactionError as exc:
+        LOGGER.error(f"Save preview failed: {traceback.format_exc()}")
+        return reply(1, msg=str(exc)), 409
+    except Exception:
+        LOGGER.error(f"Save preview failed: {traceback.format_exc()}")
+        return reply(1, msg="The save could not be validated."), 500
+
+
 @save_blueprint.route("/settings", methods=["PATCH"])
 @jwt_required()
 def update_settings():
@@ -124,6 +148,8 @@ def update_settings():
     enabled = payload.get("BackupEnabled")
     if not isinstance(enabled, bool):
         return reply(1, msg="BackupEnabled must be a boolean."), 400
+    if SaveManager()._save_kind == "dedicated" and enabled is not True:
+        return reply(1, msg="Dedicated-server backups cannot be disabled."), 409
     Config.set_config("backup_enabled", enabled)
     return reply(0, SaveManager().session_summary())
 

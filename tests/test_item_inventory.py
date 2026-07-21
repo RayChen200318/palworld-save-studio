@@ -71,6 +71,14 @@ class ItemCatalogTests(unittest.TestCase):
         for group in data["Groups"]:
             self.assertTrue(group["Variants"])
             self.assertTrue(all(value in data["Items"] for value in group["Variants"]))
+        grouped_variants = {
+            static_id for group in data["Groups"] for static_id in group["Variants"]
+        }
+        self.assertEqual(grouped_variants, set(data["Items"]))
+        self.assertEqual(
+            data["Source"]["PalworldSavePalCommit"],
+            "0d99b04acba369ec88550d122794b9917bbf820e",
+        )
 
     def test_every_catalog_icon_is_a_nonempty_webp(self) -> None:
         data = DataProvider.get_item_catalog()
@@ -105,6 +113,30 @@ class ItemCatalogTests(unittest.TestCase):
         self.assertGreater(len(pal_gear), 100)
         self.assertTrue(all(item["MaxStack"] == 1 for item in pal_gear))
         self.assertEqual(data["Items"]["SkillUnlock_IceHorse"]["MaxStack"], 1)
+
+    def test_case_aliases_resolve_without_changing_the_canonical_catalog(self) -> None:
+        expected = {
+            "GunPowder2": "Gunpowder2",
+            "SkillCard_StoneShotGun": "SkillCard_StoneShotgun",
+            "bone": "Bone",
+        }
+        for raw_id, canonical in expected.items():
+            with self.subTest(raw_id=raw_id):
+                self.assertEqual(
+                    DataProvider.get_item_data(raw_id)["StaticId"], canonical
+                )
+                self.assertEqual(DataProvider.resolve_item_static_id(raw_id), canonical)
+
+    def test_gunpowder_group_has_correct_search_terms_and_icon(self) -> None:
+        group = next(
+            group
+            for group in DataProvider.get_item_groups()
+            if "Gunpowder2" in group["Variants"]
+        )
+        self.assertIn("火药", group["SearchTerms"])
+        self.assertEqual(group["I18n"]["zh-CN"], "火药")
+        self.assertEqual(group["IconKey"], "t_itemicon_material_gunpowder2")
+        self.assertEqual(group["ManagedKind"], "normal")
 
 
 class ItemInventoryTests(unittest.TestCase):
@@ -281,6 +313,38 @@ class ItemInventoryTests(unittest.TestCase):
         self.assertEqual(len(self.service.dynamic_entries), 1)
         remaining = self.service.dynamic_entries[0]["RawData"]["value"]["id"]["static_id"]
         self.assertEqual(remaining, "ClothArmor")
+
+    def test_existing_case_aliases_keep_their_original_static_id(self) -> None:
+        aliases = ("GunPowder2", "SkillCard_StoneShotGun", "bone")
+        for index, static_id in enumerate(aliases):
+            self._append("common", index, static_id)
+        slots = self.service.player_inventory("player-1")["Containers"]["common"]["Slots"]
+        self.assertEqual(
+            [slots[index]["Item"]["StaticId"] for index in range(len(aliases))],
+            list(aliases),
+        )
+        self.assertTrue(all(slots[index]["Item"]["IconKey"] for index in range(len(aliases))))
+
+    def test_system_progress_record_is_visible_but_immutable(self) -> None:
+        self._append("essential", 0, "BossDefeatReward_Test", 1)
+        item = self.service.player_inventory("player-1")["Containers"]["essential"]["Slots"][0]["Item"]
+        self.assertEqual(item["ManagedKind"], "system")
+        self.assertIn("system-managed", item["StateFlags"])
+        before = self.service.semantic_snapshot()
+        with self.assertRaisesRegex(ItemInventoryError, "read-only"):
+            self.service.patch_item("player-1", "essential", 0, {"Quantity": 2})
+        with self.assertRaisesRegex(ItemInventoryError, "read-only"):
+            self.service.delete_item("player-1", "essential", 0, True)
+        with self.assertRaisesRegex(ItemInventoryError, "read-only"):
+            self.service.move_item("player-1", "essential", 0, "common", 0)
+        self.assertEqual(self.service.semantic_snapshot(), before)
+
+    def test_catalog_returns_full_variants_and_excludes_system_records(self) -> None:
+        catalog = self.service.catalog()
+        group = next(group for group in catalog["Groups"] if len(group["Variants"]) > 1)
+        self.assertTrue(all(isinstance(variant, dict) for variant in group["Variants"]))
+        self.assertTrue(all(variant["ManagedKind"] == "normal" for variant in group["Variants"]))
+        self.assertFalse(any(key.startswith("BossDefeatReward_") for key in catalog["Items"]))
 
 
 if __name__ == "__main__":

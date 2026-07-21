@@ -1,4 +1,5 @@
 export type Locale = 'zh-CN' | 'en'
+export type SaveKind = 'local' | 'dedicated'
 
 export interface SaveStatistics {
   Players: number
@@ -11,13 +12,28 @@ export interface SaveStatistics {
 export interface CommitResult {
   Verified: boolean
   FilesWritten: number
+  SourceVerified: boolean
+  FilesChanged: string[]
+  FilesSkipped: string[]
   BackupPath: string | null
   Revision: number
+}
+
+export interface CommitPreview {
+  SourceVerified: boolean
+  FilesChanged: string[]
+  FilesSkipped: string[]
+  BackupPath: string
+  WorldId: string
 }
 
 export interface SaveSession {
   Path: string | null
   Loaded: boolean
+  SaveKind: SaveKind
+  WorldId: string | null
+  BackupRequired: boolean
+  SourceVerified: boolean
   DirtyRevision: number
   Dirty: boolean
   Statistics: SaveStatistics
@@ -226,6 +242,7 @@ export interface ItemCatalogEntry {
   MaxDurability: number
   MagazineSize: number
   IconKey: string
+  ManagedKind: 'normal' | 'system'
 }
 
 export interface ItemCatalogGroup {
@@ -233,7 +250,10 @@ export interface ItemCatalogGroup {
   I18n: LocalizedText
   Category: string
   IconKey: string
-  Variants: string[]
+  RepresentativeStaticId: string
+  Variants: ItemCatalogEntry[]
+  SearchTerms: string[]
+  ManagedKind: 'normal' | 'system'
 }
 
 export interface EggSpecies {
@@ -257,6 +277,7 @@ export interface ItemVariantSummary {
 
 export interface ItemSlotItem {
   StaticId: string
+  ManagedKind: 'normal' | 'system'
   I18n: LocalizedText
   IconKey: string | null
   Category: string

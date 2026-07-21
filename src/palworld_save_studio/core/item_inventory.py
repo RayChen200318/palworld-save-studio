@@ -302,6 +302,13 @@ class ItemInventoryService:
         if len(self.dynamic_references.get(dynamic_id, [])) != 1:
             raise ItemInventoryError("The item's dynamic UUID has multiple slot references.")
 
+    def _assert_mutable_item(self, slot: dict[str, Any]) -> None:
+        static_id = str(self._slot_raw(slot)["item"]["static_id"])
+        if DataProvider.get_item_managed_kind(static_id) == "system":
+            raise ItemInventoryError(
+                "System-managed progression records are read-only."
+            )
+
     def _slot_payload(
         self, player: Any, container_name: str, index: int, slot: dict[str, Any] | None
     ) -> dict[str, Any]:
@@ -318,12 +325,15 @@ class ItemInventoryService:
         raw = self._slot_raw(slot)
         static_id = str(raw["item"]["static_id"])
         catalog = self._catalog_entry(static_id)
+        managed_kind = DataProvider.get_item_managed_kind(static_id)
         dynamic_id_value = raw["item"]["dynamic_id"]["local_id_in_created_world"]
         dynamic_id = None if _is_zero_uuid(dynamic_id_value) else _uuid_text(dynamic_id_value)
         dynamic = self.dynamic_records.get(dynamic_id) if dynamic_id else None
         dynamic_raw = dynamic["RawData"]["value"] if dynamic else None
         flags: list[str] = []
-        if catalog is None:
+        if managed_kind == "system":
+            flags.append("system-managed")
+        elif catalog is None:
             flags.append("unknown-item")
         if _is_pal_gear(catalog) and int(raw["count"]) != 1:
             flags.append("invalid-quantity")
@@ -353,6 +363,7 @@ class ItemInventoryService:
             ]
         item_payload = {
             "StaticId": static_id,
+            "ManagedKind": managed_kind,
             "I18n": catalog["I18n"] if catalog else {"en": static_id, "zh-CN": static_id},
             "IconKey": catalog["IconKey"] if catalog else None,
             "Category": catalog["Category"] if catalog else "unknown",
@@ -405,8 +416,13 @@ class ItemInventoryService:
             "Containers": containers,
         }
 
-    def catalog(self) -> dict[str, Any]:
+    @staticmethod
+    def catalog() -> dict[str, Any]:
         data = DataProvider.get_item_catalog()
+        items = {
+            static_id: {**item, "ManagedKind": "normal"}
+            for static_id, item in data["Items"].items()
+        }
         species = []
         for pal in DataProvider.get_sorted_pals():
             internal_name = pal["InternalName"]
@@ -421,8 +437,18 @@ class ItemInventoryService:
             )
         return {
             "Source": data["Source"],
-            "Items": data["Items"],
-            "Groups": data["Groups"],
+            "Items": items,
+            "Groups": [
+                {
+                    **group,
+                    "Variants": [
+                        items[static_id]
+                        for static_id in group["Variants"]
+                        if static_id in items
+                    ],
+                }
+                for group in data["Groups"]
+            ],
             "EggSpecies": species,
         }
 
@@ -522,6 +548,7 @@ class ItemInventoryService:
         item = self._catalog_entry(static_id)
         if item is None:
             raise ItemInventoryError("Only catalogued Palworld 1.0 items can be added.")
+        static_id = item["StaticId"]
         if not isinstance(quantity, int) or isinstance(quantity, bool):
             raise ItemInventoryError("Quantity must be an integer.")
         if _is_pal_gear(item) and quantity != 1:
@@ -574,6 +601,7 @@ class ItemInventoryService:
             raise ItemInventoryError(f"Unsupported item fields: {', '.join(sorted(unknown))}")
         player = self._player(player_id)
         _, slot = self._slot(player, container_name, slot_index)
+        self._assert_mutable_item(slot)
         self._assert_dynamic_integrity(slot)
         raw = self._slot_raw(slot)
         old_static_id = str(raw["item"]["static_id"])
@@ -605,6 +633,7 @@ class ItemInventoryService:
                 new_catalog = self._catalog_entry(new_static_id) if isinstance(new_static_id, str) else None
                 if not old_catalog or not new_catalog:
                     raise ItemInventoryError("Unknown items cannot change rarity variants.")
+                new_static_id = new_catalog["StaticId"]
                 variants = {item["StaticId"] for item in DataProvider.get_item_variants(old_static_id)}
                 if new_static_id not in variants:
                     raise ItemInventoryError("StaticId is not a formal variant of this item.")
@@ -734,6 +763,7 @@ class ItemInventoryService:
     ) -> dict[str, Any]:
         player = self._player(player_id)
         container, slot = self._slot(player, container_name, slot_index)
+        self._assert_mutable_item(slot)
         self._assert_dynamic_integrity(slot)
         static_id = str(self._slot_raw(slot)["item"]["static_id"])
         catalog = self._catalog_entry(static_id)
@@ -761,6 +791,7 @@ class ItemInventoryService:
             raise ItemInventoryError("Source and target slots must be different.")
         player = self._player(player_id)
         source, slot = self._slot(player, source_container, source_slot)
+        self._assert_mutable_item(slot)
         self._assert_dynamic_integrity(slot)
         source_raw = self._slot_raw(slot)
         static_id = str(source_raw["item"]["static_id"])
@@ -781,6 +812,7 @@ class ItemInventoryService:
                 source_raw["slot_index"] = target_slot
                 self._slot_values(target).append(slot)
             else:
+                self._assert_mutable_item(target_item)
                 self._assert_dynamic_integrity(target_item)
                 target_raw = self._slot_raw(target_item)
                 target_static_id = str(target_raw["item"]["static_id"])
@@ -826,6 +858,34 @@ class ItemInventoryService:
             if target is not source:
                 self._slot_values(target).sort(key=lambda item: self._slot_raw(item)["slot_index"])
         return self.player_inventory(player_id)
+
+    def validate_integrity(self) -> None:
+        """Validate every editable slot and its dynamic-record references."""
+
+        self._reindex()
+        if self.duplicate_dynamic_ids:
+            raise ItemInventoryError("The save contains duplicated dynamic item UUIDs.")
+        for player in self.manager.get_players():
+            for container_name in CONTAINER_PROPERTIES:
+                container = self._container(player, container_name)
+                for slot in self._slots_by_index(container).values():
+                    raw = self._slot_raw(slot)
+                    static_id = raw.get("item", {}).get("static_id")
+                    count = raw.get("count")
+                    if not isinstance(static_id, str) or not static_id:
+                        raise ItemInventoryError("An item slot has an invalid StaticId.")
+                    if not isinstance(count, int) or isinstance(count, bool) or count < 1:
+                        raise ItemInventoryError("An item slot has an invalid quantity.")
+                    self._assert_dynamic_integrity(slot)
+                    dynamic = self._dynamic_for_slot(slot)
+                    if dynamic is not None:
+                        dynamic_static_id = dynamic["RawData"]["value"]["id"].get(
+                            "static_id"
+                        )
+                        if dynamic_static_id != static_id:
+                            raise ItemInventoryError(
+                                "A dynamic item record does not match its slot StaticId."
+                            )
 
     def semantic_snapshot(self) -> str:
         payload = {

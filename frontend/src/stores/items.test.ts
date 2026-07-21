@@ -9,7 +9,7 @@ const wood: ItemCatalogEntry = {
   StaticId: 'Wood', BaseKey: 'Wood', I18n: { en: 'Wood', 'zh-CN': '木材' }, Category: 'material',
   TypeA: 'Material', TypeB: 'MaterialWood', EquipSlot: null, AllowedContainers: ['common'],
   Rarity: 0, Rank: 1, SortId: 1, MaxStack: 9999, DynamicType: null, MaxDurability: 0,
-  MagazineSize: 0, IconKey: 'wood',
+  MagazineSize: 0, IconKey: 'wood', ManagedKind: 'normal',
 }
 const armor: ItemCatalogEntry = {
   ...wood, StaticId: 'ClothArmor', BaseKey: 'cloth', I18n: { en: 'Cloth Outfit', 'zh-CN': '布衣服' },
@@ -50,6 +50,26 @@ describe('item management store', () => {
     expect(store.filteredCatalog.map((item) => item.StaticId)).toEqual(['ClothArmor'])
     store.query = 'wood'
     expect(store.filteredCatalog).toEqual([])
+  })
+
+  it('searches the aggregated terms from every item variant', () => {
+    const store = useItemsStore()
+    store.catalog = {
+      ...catalog,
+      Groups: [{
+        BaseKey: 'Gunpowder',
+        I18n: { en: 'Gunpowder', 'zh-CN': '火药' },
+        Category: 'material',
+        IconKey: 'gunpowder',
+        RepresentativeStaticId: 'Wood',
+        Variants: [wood],
+        SearchTerms: ['GunPowder2', '火药'],
+        ManagedKind: 'normal',
+      }],
+    }
+    store.inventory = inventory()
+    store.query = '火药'
+    expect(store.filteredCatalog.map((item) => item.StaticId)).toEqual(['Wood'])
   })
 
   it('applies exactly the dirty revision returned by a successful mutation', async () => {

@@ -149,4 +149,19 @@ describe('StartView path browser', () => {
     resolveBrowse(dContext)
     await flushPromises()
   })
+
+  it('loads a WorldID with the explicitly selected dedicated mode', async () => {
+    const { wrapper, session } = await mountView()
+    session.config = {
+      I18n: 'zh-CN', I18nList: {}, Path: dContext.currentPath,
+      HasPassword: false, VERSION: '0.4.3-beta.1', IsOfficialBuild: false,
+      BackupEnabled: true,
+    }
+    const load = vi.spyOn(session, 'loadSave').mockResolvedValue(false)
+    const dedicated = wrapper.findAll('.save-kind-selector button')[1]
+    await dedicated.trigger('click')
+    await wrapper.findAll('.preview-actions button')[1].trigger('click')
+
+    expect(load).toHaveBeenCalledWith(dContext.currentPath, 'dedicated')
+  })
 })

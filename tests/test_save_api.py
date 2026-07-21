@@ -211,7 +211,28 @@ class SaveApiTests(unittest.TestCase):
                 json={"WritePath": "C:/Different-Save"},
             )
         self.assertEqual(response.status_code, 200)
-        manager.commit.assert_called_once_with()
+        manager.commit.assert_called_once_with(server_stopped_confirmed=False)
+
+    def test_commit_forwards_dedicated_server_confirmation(self) -> None:
+        manager = MagicMock()
+        manager.commit.return_value = {
+            "Verified": True,
+            "FilesWritten": 1,
+            "SourceVerified": True,
+            "FilesChanged": ["Level.sav"],
+            "FilesSkipped": ["Players/ABC.sav"],
+            "BackupPath": "C:/Save/Palworld-Save-Studio-Backup/fixture",
+            "Revision": 0,
+        }
+        manager.session_summary.return_value = {"Loaded": True}
+        with patch("palworld_save_studio.api.save.SaveManager", return_value=manager):
+            response = self.client.post(
+                "/api/save/commit",
+                headers=self.headers,
+                json={"ServerStoppedConfirmed": True},
+            )
+        self.assertEqual(response.status_code, 200)
+        manager.commit.assert_called_once_with(server_stopped_confirmed=True)
 
     def test_load_refuses_to_replace_an_existing_draft(self) -> None:
         manager = MagicMock()
@@ -220,12 +241,36 @@ class SaveApiTests(unittest.TestCase):
             response = self.client.post(
                 "/api/save/load",
                 headers=self.headers,
-                json={"ReadPath": "C:/Different-Save"},
+                json={"ReadPath": "C:/Different-Save", "SaveKind": "local"},
             )
 
         self.assertEqual(response.status_code, 409)
         self.assertIn("Discard", response.get_json()["msg"])
         manager.open.assert_not_called()
+
+    def test_load_requires_an_explicit_save_kind(self) -> None:
+        manager = MagicMock()
+        with patch("palworld_save_studio.api.save.SaveManager", return_value=manager):
+            response = self.client.post(
+                "/api/save/load",
+                headers=self.headers,
+                json={"ReadPath": "C:/Save"},
+            )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("SaveKind", response.get_json()["msg"])
+        manager.open.assert_not_called()
+
+    def test_dedicated_backup_cannot_be_disabled(self) -> None:
+        manager = MagicMock()
+        manager._save_kind = "dedicated"
+        with patch("palworld_save_studio.api.save.SaveManager", return_value=manager):
+            response = self.client.patch(
+                "/api/save/settings",
+                headers=self.headers,
+                json={"BackupEnabled": False},
+            )
+        self.assertEqual(response.status_code, 409)
+        self.assertIn("cannot be disabled", response.get_json()["msg"])
 
     def test_backup_setting_requires_a_boolean(self) -> None:
         response = self.client.patch(
@@ -245,6 +290,21 @@ class SaveApiTests(unittest.TestCase):
         groups = response.get_json()["data"]["techLvDict"]
         first_item = next(item for items in groups.values() for item in items)
         self.assertIsInstance(first_item["I18n"], str)
+
+    def test_item_catalog_contract_is_complete_without_a_loaded_save(self) -> None:
+        response = self.client.get("/api/item/catalog", headers=self.headers)
+        self.assertEqual(response.status_code, 200)
+        catalog = response.get_json()["data"]
+        group = next(item for item in catalog["Groups"] if len(item["Variants"]) > 1)
+        self.assertTrue(all(isinstance(item, dict) for item in group["Variants"]))
+        self.assertTrue(group["SearchTerms"])
+        self.assertEqual(group["ManagedKind"], "normal")
+        self.assertTrue(
+            all(item["ManagedKind"] == "normal" for item in catalog["Items"].values())
+        )
+        self.assertFalse(
+            any(key.startswith("BossDefeatReward_") for key in catalog["Items"])
+        )
 
     def test_pal_and_skill_catalogs_include_both_supported_languages(self) -> None:
         pal = self.client.get("/api/save/pal_data", headers=self.headers).get_json()[

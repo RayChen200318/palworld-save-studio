@@ -111,9 +111,13 @@ class PlayerEntity:
     @LOGGER.change_logger("UnusedStatusPoint")
     @type_guard
     def UnusedStatusPoint(self, value: int) -> None:
-        value = clamp(PalObjects.UInt16Min, PalObjects.UInt16Max, value)
+        if value < PalObjects.UInt16Min or value > PalObjects.UInt16Max:
+            raise ValueError(
+                f"UnusedStatusPoint must be between {PalObjects.UInt16Min} "
+                f"and {PalObjects.UInt16Max}."
+            )
         if self.UnusedStatusPoint is None:
-            self._player_param["UnusedStatusPoint"] = PalObjects.IntProperty(value)
+            self._player_param["UnusedStatusPoint"] = PalObjects.UInt16Property(value)
         else:
             PalObjects.set_BaseType(self._player_param["UnusedStatusPoint"], value)
 
@@ -125,116 +129,57 @@ class PlayerEntity:
     def GotExStatusPointList(self) -> Optional[list[dict]]:
         return PalObjects.get_ArrayProperty(self._player_param.get("GotExStatusPointList"))
 
+    @staticmethod
+    def _status_point_value(entries: Optional[list[dict]], status_name: str) -> Optional[int]:
+        for entry in entries or []:
+            if PalObjects.get_BaseType(entry.get("StatusName")) == status_name:
+                return PalObjects.get_BaseType(entry.get("StatusPoint"))
+        return None
+
     @property
     def StatusPointHP(self) -> Optional[int]:
-        if not self.GotStatusPointList:
-            self._player_param["GotStatusPointList"] = PalObjects.GotStatusPointList()
-
-        for sp in self.GotStatusPointList:
-            if (PalObjects.get_BaseType(sp.get("StatusName")) == StatusName.MaxHP):
-                status_point = PalObjects.get_BaseType(sp.get("StatusPoint"))
-                return status_point
+        return self._status_point_value(self.GotStatusPointList, StatusName.MaxHP)
 
     @property
     def StatusPointSP(self) -> Optional[int]:
-        if not self.GotStatusPointList:
-            self._player_param["GotStatusPointList"] = PalObjects.GotStatusPointList()
-
-        for sp in self.GotStatusPointList:
-            if (PalObjects.get_BaseType(sp.get("StatusName")) == StatusName.MaxSP):
-                status_point = PalObjects.get_BaseType(sp.get("StatusPoint"))
-                return status_point
+        return self._status_point_value(self.GotStatusPointList, StatusName.MaxSP)
 
     @property
     def StatusPointATK(self) -> Optional[int]:
-        if not self.GotStatusPointList:
-            self._player_param["GotStatusPointList"] = PalObjects.GotStatusPointList()
-
-        for sp in self.GotStatusPointList:
-            if (PalObjects.get_BaseType(sp.get("StatusName")) == StatusName.Attack):
-                status_point = PalObjects.get_BaseType(sp.get("StatusPoint"))
-                return status_point
+        return self._status_point_value(self.GotStatusPointList, StatusName.Attack)
 
     @property
     def StatusPointCarryWeight(self) -> Optional[int]:
-        if not self.GotStatusPointList:
-            self._player_param["GotStatusPointList"] = PalObjects.GotStatusPointList()
-
-        for sp in self.GotStatusPointList:
-            if (PalObjects.get_BaseType(sp.get("StatusName")) == StatusName.CarryWeight):
-                status_point = PalObjects.get_BaseType(sp.get("StatusPoint"))
-                return status_point
+        return self._status_point_value(self.GotStatusPointList, StatusName.CarryWeight)
 
     @property
     def StatusPointCaptureRate(self) -> Optional[int]:
-        if not self.GotStatusPointList:
-            self._player_param["GotStatusPointList"] = PalObjects.GotStatusPointList()
-
-        for sp in self.GotStatusPointList:
-            if (PalObjects.get_BaseType(sp.get("StatusName")) == StatusName.CaptureRate):
-                status_point = PalObjects.get_BaseType(sp.get("StatusPoint"))
-                return status_point
+        return self._status_point_value(self.GotStatusPointList, StatusName.CaptureRate)
 
     @property
     def StatusPointWorkSpeed(self) -> Optional[int]:
-        if not self.GotStatusPointList:
-            self._player_param["GotStatusPointList"] = PalObjects.GotStatusPointList()
-
-        for sp in self.GotStatusPointList:
-            if (PalObjects.get_BaseType(sp.get("StatusName")) == StatusName.WorkSpeed):
-                status_point = PalObjects.get_BaseType(sp.get("StatusPoint"))
-                return status_point
+        return self._status_point_value(self.GotStatusPointList, StatusName.WorkSpeed)
 
     # do this for ex points as well, while ex points do not have the capture rate thing
     @property
     def ExStatusPointHP(self) -> Optional[int]:
-        if not self.GotExStatusPointList:
-            self._player_param["GotExStatusPointList"] = PalObjects.GotExStatusPointList()
-
-        for sp in self.GotExStatusPointList:
-            if (PalObjects.get_BaseType(sp.get("StatusName")) == StatusName.MaxHP):
-                status_point = PalObjects.get_BaseType(sp.get("StatusPoint"))
-                return status_point
+        return self._status_point_value(self.GotExStatusPointList, StatusName.MaxHP)
 
     @property
     def ExStatusPointSP(self) -> Optional[int]:
-        if not self.GotExStatusPointList:
-            self._player_param["GotExStatusPointList"] = PalObjects.GotExStatusPointList()
-
-        for sp in self.GotExStatusPointList:
-            if (PalObjects.get_BaseType(sp.get("StatusName")) == StatusName.MaxSP):
-                status_point = PalObjects.get_BaseType(sp.get("StatusPoint"))
-                return status_point
+        return self._status_point_value(self.GotExStatusPointList, StatusName.MaxSP)
 
     @property
     def ExStatusPointATK(self) -> Optional[int]:
-        if not self.GotExStatusPointList:
-            self._player_param["GotExStatusPointList"] = PalObjects.GotExStatusPointList()
-
-        for sp in self.GotExStatusPointList:
-            if (PalObjects.get_BaseType(sp.get("StatusName")) == StatusName.Attack):
-                status_point = PalObjects.get_BaseType(sp.get("StatusPoint"))
-                return status_point
+        return self._status_point_value(self.GotExStatusPointList, StatusName.Attack)
 
     @property
     def ExStatusPointCarryWeight(self) -> Optional[int]:
-        if not self.GotExStatusPointList:
-            self._player_param["GotExStatusPointList"] = PalObjects.GotExStatusPointList()
-
-        for sp in self.GotExStatusPointList:
-            if (PalObjects.get_BaseType(sp.get("StatusName")) == StatusName.CarryWeight):
-                status_point = PalObjects.get_BaseType(sp.get("StatusPoint"))
-                return status_point
+        return self._status_point_value(self.GotExStatusPointList, StatusName.CarryWeight)
 
     @property
     def ExStatusPointWorkSpeed(self) -> Optional[int]:
-        if not self.GotExStatusPointList:
-            self._player_param["GotExStatusPointList"] = PalObjects.GotExStatusPointList()
-
-        for sp in self.GotExStatusPointList:
-            if (PalObjects.get_BaseType(sp.get("StatusName")) == StatusName.WorkSpeed):
-                status_point = PalObjects.get_BaseType(sp.get("StatusPoint"))
-                return status_point
+        return self._status_point_value(self.GotExStatusPointList, StatusName.WorkSpeed)
 
     @property
     def Level(self) -> Optional[int]:

@@ -1,6 +1,6 @@
 const zhCN = {
   common: {
-    product: 'Palworld Save Studio', version: '0.4.2', beta: '正式版', unofficial: '非官方粉丝工具',
+    product: 'Palworld Save Studio', version: '0.4.3-beta.1', beta: '测试版', unofficial: '非官方粉丝工具',
     save: '保存全部修改', saving: '正在保存', cancel: '取消', confirm: '确认', close: '关闭', back: '返回',
     loading: '正在载入', retry: '重试', search: '搜索', all: '全部', none: '无', add: '新增', edit: '编辑',
     delete: '删除', duplicate: '复制', level: '等级', owner: '持有者', location: '位置', status: '状态',
@@ -13,6 +13,7 @@ const zhCN = {
   start: {
     eyebrow: 'PALWORLD 1.0 · WINDOWS SAVE EDITOR', title: '打开存档，开始编辑。',
     intro: '支持 Palworld 1.0 的帕鲁、玩家与科技编辑。', choose: '选择存档文件夹', detect: '检测 Steam 存档',
+    saveKind: '存档类型', localSave: '本地存档', localSaveHint: '单人或 Steam 世界', dedicatedSave: '专用服务器', dedicatedSaveHint: 'WorldID 目录与专服保护模式',
     open: '打开此存档', browse: '浏览文件夹', pathLabel: '存档位置', candidate: '检测到的存档',
     compatible: '包含 Level.sav 与 Players 文件夹', notSave: '当前文件夹不是完整的 Palworld 存档',
     gameExitTitle: '打开前请退出游戏', gameExitCopy: '关闭 Palworld 与服务器进程，避免游戏进程同时修改文件。',
@@ -86,17 +87,18 @@ const zhCN = {
     delete: '删除物品', deleteTitle: '删除此物品？', deleteCopy: '删除会进入当前内存草稿，保存全部修改后才写入存档。',
     deleteDangerTitle: '删除关键或扩容物品？', deleteDangerCopy: '此操作可能缩减可用槽位。系统会先整理受影响物品；空间不足时整项操作会被拒绝。', confirmDelete: '确认删除',
     noEmptySlot: '当前容器没有兼容的空槽位。', noCommonSpace: '普通背包没有可用空槽，无法取回。', unknown: '未知',
+    systemManaged: '系统记录', systemManagedHint: '这是 PalServer 管理的世界进度记录，只能查看，不能修改、移动或删除。',
     slotTypes: { head: '头部', body: '身体', accessory: '饰品', shield: '护盾', glider: '滑翔伞', 'sphere-module': '帕鲁球模块' },
     rarities: { 0: '普通', 1: '罕见', 2: '稀有', 3: '史诗', 4: '传说', 5: '特殊' },
   },
   settings: {
-    title: '设置与关于', language: '界面语言', backup: '持久备份', backupHint: '保存前在 Palworld-Save-Studio-Backup 中保留一份存档副本。',
+    title: '设置与关于', language: '界面语言', backup: '持久备份', backupHint: '保存前在 Palworld-Save-Studio-Backup 中保留一份存档副本。', backupRequiredHint: '专用服务器模式强制备份完整核心存档，不能关闭。',
     disableBackup: '关闭持久备份？', disableBackupCopy: '关闭后，后续保存不再创建持久副本。临时事务校验不受影响。',
     disable: '确认关闭', license: '许可证与来源', legal: 'GPL-3.0 开源软件。来源与导入基线记录见 NOTICE。',
     disclaimer: '非官方粉丝工具，与 Pocketpair, Inc. 无关联。软件不提供任何担保。', maintainer: '维护者', maintainerName: 'RayChen200318',
   },
   dialogs: {
-    saveTitle: '保存全部修改？', target: '目标存档路径',
+    saveTitle: '保存全部修改？', target: '目标存档路径', worldId: 'WorldID', backupTarget: '备份目录', filesChanged: '将写入的文件', filesSkipped: '确认未变化并跳过的文件', serverStopped: '我已确认 PalServer 完全停止', serverStoppedHint: '软件只能核验文件是否变化，无法判断服务器进程是否仍占用存档。',
     discardTitle: '放弃全部修改？', discardCopy: '当前内存草稿将被重新载入的磁盘内容替换。', discard: '放弃全部修改',
     changeTitle: '当前存在未保存修改', changeCopy: '更换存档前只能取消，或放弃全部修改。',
   },
@@ -106,7 +108,7 @@ const zhCN = {
 
 const en = {
   common: {
-    product: 'Palworld Save Studio', version: '0.4.2', beta: 'Stable', unofficial: 'Unofficial fan tool',
+    product: 'Palworld Save Studio', version: '0.4.3-beta.1', beta: 'Beta', unofficial: 'Unofficial fan tool',
     save: 'Save all changes', saving: 'Saving', cancel: 'Cancel', confirm: 'Confirm', close: 'Close', back: 'Back',
     loading: 'Loading', retry: 'Retry', search: 'Search', all: 'All', none: 'None', add: 'Add', edit: 'Edit',
     delete: 'Delete', duplicate: 'Duplicate', level: 'Level', owner: 'Owner', location: 'Location', status: 'Status',
@@ -119,6 +121,7 @@ const en = {
   start: {
     eyebrow: 'PALWORLD 1.0 · WINDOWS SAVE EDITOR', title: 'Open a save. Start editing.',
     intro: 'Edit Pals, players, and technology in Palworld 1.0.', choose: 'Choose save folder', detect: 'Detect Steam save',
+    saveKind: 'Save type', localSave: 'Local save', localSaveHint: 'Single-player or Steam world', dedicatedSave: 'Dedicated server', dedicatedSaveHint: 'WorldID folder with server safeguards',
     open: 'Open this save', browse: 'Browse folders', pathLabel: 'Save location', candidate: 'Detected save',
     compatible: 'Contains Level.sav and the Players folder', notSave: 'This folder is not a complete Palworld save',
     gameExitTitle: 'Exit the game first', gameExitCopy: 'Close Palworld and server processes before opening files.',
@@ -192,17 +195,18 @@ const en = {
     delete: 'Delete item', deleteTitle: 'Delete this item?', deleteCopy: 'Deletion enters the in-memory draft and reaches disk only after saving all changes.',
     deleteDangerTitle: 'Delete a key or capacity item?', deleteDangerCopy: 'This may reduce available slots. Affected items are reorganized first; the operation is rejected atomically if space is insufficient.', confirmDelete: 'Delete item',
     noEmptySlot: 'No compatible empty slot exists in this container.', noCommonSpace: 'The inventory has no free slot for retrieval.', unknown: 'Unknown',
+    systemManaged: 'System record', systemManagedHint: 'PalServer manages this world-progression record. It is view-only and cannot be edited, moved, or deleted.',
     slotTypes: { head: 'Head', body: 'Body', accessory: 'Accessory', shield: 'Shield', glider: 'Glider', 'sphere-module': 'Sphere module' },
     rarities: { 0: 'Common', 1: 'Uncommon', 2: 'Rare', 3: 'Epic', 4: 'Legendary', 5: 'Special' },
   },
   settings: {
-    title: 'Settings & About', language: 'Interface language', backup: 'Persistent backup', backupHint: 'Keep a save copy in Palworld-Save-Studio-Backup before committing.',
+    title: 'Settings & About', language: 'Interface language', backup: 'Persistent backup', backupHint: 'Keep a save copy in Palworld-Save-Studio-Backup before committing.', backupRequiredHint: 'Dedicated-server mode always backs up the complete core save and cannot be disabled.',
     disableBackup: 'Disable persistent backups?', disableBackupCopy: 'Future saves will stop creating persistent copies. Temporary transaction validation remains enabled.',
     disable: 'Disable', license: 'License & provenance', legal: 'GPL-3.0 software. See NOTICE for provenance and import baselines.',
     disclaimer: 'Unofficial fan tool, not affiliated with Pocketpair, Inc. The software is provided without warranty.', maintainer: 'Maintainer', maintainerName: 'RayChen200318',
   },
   dialogs: {
-    saveTitle: 'Save all changes?', target: 'Target save path',
+    saveTitle: 'Save all changes?', target: 'Target save path', worldId: 'WorldID', backupTarget: 'Backup directory', filesChanged: 'Files to write', filesSkipped: 'Verified unchanged and skipped', serverStopped: 'I confirm that PalServer is fully stopped', serverStoppedHint: 'The app can verify file changes but cannot determine whether the server process still has the save open.',
     discardTitle: 'Discard all changes?', discardCopy: 'The current in-memory draft will be replaced with data reloaded from disk.', discard: 'Discard all changes',
     changeTitle: 'Unsaved changes exist', changeCopy: 'To change saves, cancel or discard every current change.',
   },

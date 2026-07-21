@@ -30,12 +30,23 @@ jobs:
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
-        run: >-
-          gh release create $env:GITHUB_REF_NAME
-          .\dist\Palworld-Save-Studio.exe
-          .\dist\Palworld-Save-Studio.exe.sha256
-          .\dist\Palworld-Save-Studio-Windows-x64.zip
-          .\dist\Palworld-Save-Studio-Windows-x64.zip.sha256
-          --verify-tag
-          --generate-notes
-          --title "Palworld Save Studio $env:GITHUB_REF_NAME"
+        run: |
+          $releaseArgs = @(
+            $env:GITHUB_REF_NAME,
+            '.\dist\Palworld-Save-Studio.exe',
+            '.\dist\Palworld-Save-Studio.exe.sha256',
+            '.\dist\Palworld-Save-Studio-Windows-x64.zip',
+            '.\dist\Palworld-Save-Studio-Windows-x64.zip.sha256',
+            '--verify-tag',
+            '--title', "Palworld Save Studio $env:GITHUB_REF_NAME"
+          )
+          if ($env:GITHUB_REF_NAME -match '-') {
+            $releaseArgs += '--prerelease'
+            $releaseArgs += @(
+              '--notes',
+              'Beta: includes the dedicated-server protection rewrite and still requires live PalServer validation. Version 0.4.2 remains the latest stable release.'
+            )
+          } else {
+            $releaseArgs += '--generate-notes'
+          }
+          gh release create @releaseArgs

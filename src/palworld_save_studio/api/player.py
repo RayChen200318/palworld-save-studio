@@ -1,12 +1,15 @@
 from __future__ import annotations
 
+from contextlib import contextmanager
+import copy
 import traceback
-from typing import Any
+from typing import Any, Iterator
 
 from flask import Blueprint, request
 from flask_jwt_extended import jwt_required
 
 from palworld_save_studio.core import SaveManager
+from palworld_save_studio.core.pal_objects import PalObjects
 from palworld_save_studio.core.player_entity import PlayerEntity
 from palworld_save_studio.utils import DataProvider, LOGGER
 from palworld_save_studio.utils.util import reply
@@ -51,6 +54,72 @@ def _bounded_integer(value: Any, name: str, minimum: int, maximum: int) -> int:
     return parsed
 
 
+@contextmanager
+def _atomic_player(player: PlayerEntity) -> Iterator[None]:
+    """Restore both Level.sav and player-SAV data if a player edit fails."""
+
+    parameter_backup = copy.deepcopy(player._player_param)
+    save_data_backup = copy.deepcopy(player._player_save_data)
+    try:
+        yield
+    except Exception:
+        player._player_param.clear()
+        player._player_param.update(parameter_backup)
+        player._player_save_data.clear()
+        player._player_save_data.update(save_data_backup)
+        raise
+
+
+def _validated_player_changes(
+    player: PlayerEntity, changes: Any
+) -> dict[str, Any]:
+    if not isinstance(changes, dict) or not changes:
+        raise ValueError("changes must be a non-empty object.")
+    allowed = {
+        "NickName",
+        "Level",
+        "TechnologyPoint",
+        "BossTechnologyPoint",
+        "HasViewingCage",
+    }
+    unknown = sorted(set(changes) - allowed)
+    if unknown:
+        raise ValueError(f"Unsupported fields: {', '.join(unknown)}")
+
+    validated: dict[str, Any] = {}
+    if "NickName" in changes:
+        nickname = changes["NickName"]
+        if not isinstance(nickname, str) or len(nickname) > 64:
+            raise ValueError("NickName must contain at most 64 characters.")
+        validated["NickName"] = nickname
+    if "Level" in changes:
+        target_level = _bounded_integer(
+            changes["Level"], "Level", 1, PlayerEntity.MAX_LEVEL
+        )
+        status_points = (player.UnusedStatusPoint or 0) + target_level - (player.Level or 1)
+        if status_points < PalObjects.UInt16Min:
+            raise ValueError(
+                "The player does not have enough status points to lower to that level."
+            )
+        if status_points > PalObjects.UInt16Max:
+            raise ValueError("UnusedStatusPoint would exceed the UInt16 save range.")
+        validated["Level"] = target_level
+    if "TechnologyPoint" in changes:
+        validated["TechnologyPoint"] = _bounded_integer(
+            changes["TechnologyPoint"], "TechnologyPoint", 0, 9999
+        )
+    if "BossTechnologyPoint" in changes:
+        validated["BossTechnologyPoint"] = _bounded_integer(
+            changes["BossTechnologyPoint"], "BossTechnologyPoint", 0, 9999
+        )
+    if "HasViewingCage" in changes:
+        enabled = changes["HasViewingCage"]
+        if not isinstance(enabled, bool):
+            raise ValueError("HasViewingCage must be a boolean.")
+        validated["HasViewingCage"] = enabled
+    return validated
+
+
 @player_blueprint.route("", methods=["GET"])
 @jwt_required()
 def list_players():
@@ -73,33 +142,27 @@ def patch_player(player_id: str):
     player = _find_player(player_id)
     if not player:
         return reply(1, msg=f"Player {player_id} was not found."), 404
-    changes = (request.get_json(silent=True) or {}).get("changes")
-    if not isinstance(changes, dict) or not changes:
-        return reply(1, msg="changes must be a non-empty object."), 400
-    allowed = {"NickName", "Level", "TechnologyPoint", "BossTechnologyPoint", "HasViewingCage"}
-    unknown = sorted(set(changes) - allowed)
-    if unknown:
-        return reply(1, msg=f"Unsupported fields: {', '.join(unknown)}"), 400
     try:
-        if "NickName" in changes:
-            nickname = changes["NickName"]
-            if not isinstance(nickname, str) or len(nickname) > 64:
-                raise ValueError("NickName must contain at most 64 characters.")
-            player.NickName = nickname
-        if "Level" in changes:
-            target_level = _bounded_integer(changes["Level"], "Level", 1, PlayerEntity.MAX_LEVEL)
-            player.Level = target_level
-            if player.Level != target_level:
-                raise ValueError("The player does not have enough status points to lower to that level.")
-        if "TechnologyPoint" in changes:
-            player.TechnologyPoint = _bounded_integer(changes["TechnologyPoint"], "TechnologyPoint", 0, 9999)
-        if "BossTechnologyPoint" in changes:
-            player.bossTechnologyPoint = _bounded_integer(changes["BossTechnologyPoint"], "BossTechnologyPoint", 0, 9999)
-        if "HasViewingCage" in changes:
-            enabled = changes["HasViewingCage"]
-            if not isinstance(enabled, bool):
-                raise ValueError("HasViewingCage must be a boolean.")
-            player.toggle_UnlockedRecipeTechnologyNames("DisplayCharacter", enabled)
+        changes = _validated_player_changes(
+            player, (request.get_json(silent=True) or {}).get("changes")
+        )
+        with _atomic_player(player):
+            if "NickName" in changes:
+                player.NickName = changes["NickName"]
+            if "Level" in changes:
+                player.Level = changes["Level"]
+                if player.Level != changes["Level"]:
+                    raise ValueError(
+                        "The player does not have enough status points to lower to that level."
+                    )
+            if "TechnologyPoint" in changes:
+                player.TechnologyPoint = changes["TechnologyPoint"]
+            if "BossTechnologyPoint" in changes:
+                player.bossTechnologyPoint = changes["BossTechnologyPoint"]
+            if "HasViewingCage" in changes:
+                player.toggle_UnlockedRecipeTechnologyNames(
+                    "DisplayCharacter", changes["HasViewingCage"]
+                )
         revision = SaveManager().mark_dirty()
         return reply(0, {"Player": _player_data(player, include_technology=True), "DirtyRevision": revision})
     except ValueError as exc:
@@ -120,7 +183,8 @@ def patch_technology(player_id: str, technology_id: str):
     enabled = (request.get_json(silent=True) or {}).get("Enabled")
     if not isinstance(enabled, bool):
         return reply(1, msg="Enabled must be a boolean."), 400
-    player.toggle_UnlockedRecipeTechnologyNames(technology_id, enabled)
+    with _atomic_player(player):
+        player.toggle_UnlockedRecipeTechnologyNames(technology_id, enabled)
     return reply(
         0,
         {
@@ -137,5 +201,6 @@ def unlock_all_technology(player_id: str):
     player = _find_player(player_id)
     if not player:
         return reply(1, msg=f"Player {player_id} was not found."), 404
-    player.unlock_all_techs()
+    with _atomic_player(player):
+        player.unlock_all_techs()
     return reply(0, {"Player": _player_data(player, include_technology=True), "DirtyRevision": SaveManager().mark_dirty()})

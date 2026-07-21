@@ -9,7 +9,7 @@ const config: SaveConfig = {
   I18nList: { 'zh-CN': '简体中文', en: 'English' },
   Path: null,
   HasPassword: false,
-  VERSION: '0.4.2',
+  VERSION: '0.4.3-beta.1',
   IsOfficialBuild: false,
   BackupEnabled: true,
 }
@@ -17,6 +17,10 @@ const config: SaveConfig = {
 const session: SaveSession = {
   Path: null,
   Loaded: false,
+  SaveKind: 'local',
+  WorldId: null,
+  BackupRequired: false,
+  SourceVerified: false,
   DirtyRevision: 0,
   Dirty: false,
   Statistics: { Players: 0, Pals: 0, Humans: 0, Anomalies: 0, Objects: 0 },

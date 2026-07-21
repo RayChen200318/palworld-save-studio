@@ -42,12 +42,21 @@ export const useItemsStore = defineStore('items', {
         (a, b) => a.SortId - b.SortId || a.StaticId.localeCompare(b.StaticId),
       )
     },
+    catalogSearchTerms(state): Record<string, string> {
+      if (!state.catalog) return {}
+      const result: Record<string, string> = {}
+      for (const group of state.catalog.Groups) {
+        const searchable = group.SearchTerms.join(' ')
+        for (const variant of group.Variants) result[variant.StaticId] = searchable
+      }
+      return result
+    },
     filteredCatalog(): ItemCatalogEntry[] {
       const locale = useSessionStore().locale
       const query = this.query.trim().toLocaleLowerCase()
       const targetSlot = this.selectedSlot
       return this.catalogEntries.filter((item) => {
-        const searchable = `${item.I18n[locale]} ${item.I18n.en} ${item.I18n['zh-CN']} ${item.StaticId} ${item.Category} ${item.Rarity}`.toLocaleLowerCase()
+        const searchable = `${this.catalogSearchTerms[item.StaticId] || ''} ${item.I18n[locale]} ${item.I18n.en} ${item.I18n['zh-CN']} ${item.StaticId} ${item.Category} ${item.Rarity}`.toLocaleLowerCase()
         if (query && !searchable.includes(query)) return false
         if (this.category && item.Category !== this.category) return false
         if (this.rarity && String(item.Rarity) !== this.rarity) return false
